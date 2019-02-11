@@ -1,0 +1,21 @@
+# Bugs model: a half-Cauchy prior distribution on sigma.theta is induced
+# using a normal prior on xi and an inverse-gamma on tau.eta
+
+model {
+ for (j in 1:J){ # J = the number of schools
+     y[j] ~ dnorm (theta[j], tau.y[j])      # data model:  the likelihood
+     theta[j] <- mu.theta + xi*eta[j]
+     tau.y[j] <- pow(sigma.y[j], -2)
+ }
+ xi ~ dnorm (0, tau.xi)
+ tau.xi <- pow(prior.scale, -2)
+ for (j in 1:J){
+   eta[j] ~ dnorm (0, tau.eta) # hierarchical model for theta
+ }
+ tau.eta ~ dgamma (1, 1)	# conjugate Gamma(1,1)
+ sigma.theta <- 1/sqrt(tau.eta)
+ mu.theta ~ dnorm (0.0, 1.0E-6)	# noninformative prior on mu
+}
+
+
+

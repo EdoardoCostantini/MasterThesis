@@ -1,7 +1,8 @@
 # Understanding WinBUGs
 
 # Trying to replicate what was done in Gelman2006
-# while learning how to use WinBUGS in R
+# while learning how to use WinBUGS in R.
+# Important: Bugs requires proper prior distirbutions.
 
 # Sources: Gelman2006, ManualR2WinBUGS.pdf
 # Manual for OpenBUGS: https://oliviergimenez.github.io/post/run_openbugs_on_mac/
@@ -35,7 +36,7 @@ OpenBUGS.pgm = "/Applications/OpenBUGS323/OpenBUGS.exe"
 parameters = c("theta", "mu.theta", "sigma.theta")
 
 # Define Model File Location
-model.file1 <- "/Users/Edoardo/DriveUni/MasterThesis/BayesianModeling/ManualR2OpenBUGS_model1.txt"
+model.file1 <- "/Users/Edoardo/DriveUni/MasterThesis/BayesianModeling/BugsModels/ManualR2OpenBUGS_model1.txt"
 
 # Start Simulation
 schools.sim <- bugs(data, inits, model.file = model.file1,
