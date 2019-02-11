@@ -36,7 +36,11 @@ OpenBUGS.pgm = "/Applications/OpenBUGS323/OpenBUGS.exe"
 parameters = c("theta", "mu.theta", "sigma.theta")
 
 # Define Model File Location
+<<<<<<< HEAD
 model.file1 <- "/Users/Edoardo/DriveUni/MasterThesis/BayesianModeling/BugsModels/ManualR2OpenBUGS_model1.txt"
+=======
+model.file1 <- "/Users/Edoardo/DriveUni/MasterThesis/BayesianModeling/ManualR2OpenBUGS_model1.txt"
+>>>>>>> 76f3faa1e28b9862b98956cf2b0407cd28eb0e6f
 
 # Start Simulation
 schools.sim <- bugs(data, inits, model.file = model.file1,
