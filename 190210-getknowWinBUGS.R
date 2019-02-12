@@ -36,11 +36,7 @@ OpenBUGS.pgm = "/Applications/OpenBUGS323/OpenBUGS.exe"
 parameters = c("theta", "mu.theta", "sigma.theta")
 
 # Define Model File Location
-<<<<<<< HEAD
 model.file1 <- "/Users/Edoardo/DriveUni/MasterThesis/BayesianModeling/BugsModels/ManualR2OpenBUGS_model1.txt"
-=======
-model.file1 <- "/Users/Edoardo/DriveUni/MasterThesis/BayesianModeling/ManualR2OpenBUGS_model1.txt"
->>>>>>> 76f3faa1e28b9862b98956cf2b0407cd28eb0e6f
 
 # Start Simulation
 schools.sim <- bugs(data, inits, model.file = model.file1,
@@ -51,6 +47,20 @@ schools.sim <- bugs(data, inits, model.file = model.file1,
   #         - It seems that you have to run it twice to get it correct, why?
 
 # Results
-print(schools.sim)
-plot(schools.sim)
+  print(schools.sim)
+  plot(schools.sim)
+# Access posterior simulations in R
+  attributes(schools.sim$sims.list)
+# Plot posterior
+  par(mfcol=c(3,1))
+  hist(schools.sim$sims.list$sigma.theta,
+       yaxt = "n", ylab = ".",
+       xlim = c(0, 30),
+       main = "8 Schools: posterior on sigma_a given uniform prior on sigma_a",
+       breaks = 20)
+# Posterior predictive simulation
+  theta <- schools.sim$sims.list$theta
+  y.rep <- array (NA, c(1000, J))
+  for (sim in 1:1000)
+    y.rep[sim,] <- rnorm(J, theta[sim, ], sigma.y)
 

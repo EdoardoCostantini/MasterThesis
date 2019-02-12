@@ -9,6 +9,8 @@
   WINEPATH = "/usr/local/bin/winepath"
   OpenBUGS.pgm = "/Applications/OpenBUGS323/OpenBUGS.exe"
 
+# 5.1 Noninformative prior distribution 8-schools problem ---------------------
+
 #> Prep ####
   # DATA
     data("schools")
@@ -29,27 +31,10 @@
             sigma.theta = runif(1,0,100))
     }
   # Simulation
-    schools.sim <- bugs (data, inits, parameters,
+    schools.sim.UNI <- bugs (data, inits, parameters,
                          model.file = model_Gelman2004,
                          n.chains = 3, n.iter = 1000,
                          OpenBUGS.pgm = OpenBUGS.pgm, WINE = WINE, WINEPATH = WINEPATH, useWINE = T) # very imp on mac
-  # Results
-    print(schools.sim)
-    plot(schools.sim)
-  # Access posterior simulations in R
-    attributes(schools.sim$sims.list)
-  # Plot posterior
-    par(mfcol=c(3,1))
-    hist(schools.sim$sims.list$sigma.theta,
-         yaxt = "n", ylab = ".",
-         xlim = c(0, 30),
-         main = "8 Schools: posterior on sigma_a given uniform prior on sigma_a",
-         breaks = 20)
-  # Posterior predictive simulation
-    theta <- schools.sim$sims.list$theta
-    y.rep <- array (NA, c(1000, J))
-    for (sim in 1:1000)
-      y.rep[sim,] <- rnorm(J, theta[sim, ], sigma.y)
     
 #> Model2: IG(1,1) Prior ####
   model_Gelman2004 <- "/Users/Edoardo/DriveUni/MasterThesis/BayesianModeling/BugsModels/Gelman2004-schools-gammaPrior.txt"
@@ -65,13 +50,7 @@
                           n.chains = 3, n.iter = 1000,
                           OpenBUGS.pgm = OpenBUGS.pgm, WINE = WINE, WINEPATH = WINEPATH, useWINE = T)
   print(schools.sim.GP)
-  plot(schools.sim.GP)
-  # Plot posterior
-  hist(schools.sim.GP$sims.list$sigma.theta,
-       yaxt = "n", ylab = ".",
-       xlim = c(0, 30),
-       main = "8 Schools: posterior on sigma_a given IG(1,1) prior on sigma_a**2",
-       breaks = 20)
+  #plot(schools.sim.GP)
   
 #> Model2: IG(.001, .001) Prior ####
   model_Gelman2004 <- "/Users/Edoardo/DriveUni/MasterThesis/BayesianModeling/BugsModels/Gelman2004-schools-gammaPrior2.txt"
@@ -86,52 +65,101 @@
                           model.file = model_Gelman2004,
                           n.chains = 3, n.iter = 1000,
                           OpenBUGS.pgm = OpenBUGS.pgm, WINE = WINE, WINEPATH = WINEPATH, useWINE = T)
-  print(schools.sim.GP2)
-  plot(schools.sim.GP2)
-  # Plot posterior
+
+#> Results and plot ####
+  # Results
+    print(schools.sim.UNI)
+    #plot(schools.sim.UNI)
+    print(schools.sim.GP2)
+    #plot(schools.sim.GP2)
+    
+  # Posterior Plots
+    par(mfcol=c(3,1))
+  # Uniform
+  hist(schools.sim.UNI$sims.list$sigma.theta,
+       yaxt = "n", ylab = ".", xlim = c(0, 30), xlab = "sigma.theta",
+       main = "8 Schools: posterior on sigma_a given uniform prior on sigma_a",
+       breaks = 40)
+  # IG(.001,.001)
+  hist(schools.sim.GP$sims.list$sigma.theta,
+       yaxt = "n", ylab = ".", xlim = c(0, 30), xlab = "sigma.theta",
+       main = "8 Schools: posterior on sigma_a given IG(1,1) prior on sigma_a**2",
+       breaks = 20)
+  # IG(.001,.001)
   hist(schools.sim.GP2$sims.list$sigma.theta,
-       yaxt = "n", ylab = ".",
-       xlim = c(0, 30),
+       yaxt = "n", ylab = ".", xlim = c(0, 30), xlab = "sigma.theta",
        main = "8 Schools: posterior on sigma_a given IG(.001,.001) prior on sigma_a**2",
        breaks = 50)
+  # Conclusions:
+  # 1) Uniform Prior density supports for range of values for sigma.theta 
+  #    (between group variance) below 20
+  # 2) Compared to the gamma priors specified, it seems that the uniform
+  #    distirubtion is close to "noninformative" as it appears to constrain 
+  #    the posterior inference less.
+  # 3) The IG (e,e) is not at all "noninformative" for this problem since the 
+  #    resulting posterior is higly sensity to the choice of e
+
+# 5.2 Weakly informative prior distribution 3-schools -------------------------
+#> Prep ####
+  # DATA
+    data("schools")
+    J <- 3
+    y <- schools$estimate
+    sigma.y <- schools$sd
+  # Prior hyperparameter for half-t distribution
+    prior.scale <- 25 # scale parameter for the half-Cauchy distirbution (see text for decision)
+  # Parameters definition
+    parameters <- c ("theta", "mu.theta", "sigma.theta")
+  data <- list ("J", "y", "sigma.y", "prior.scale")
   
-# BUGS model: Half Cauchy prior (half-t w/ df nu = 1) ---------------------
-  # Prep
-    # DATA
-      data("schools")
-      J <- 3
-      y <- schools$estimate
-      sigma.y <- schools$sd
-    # Prior hyperparameter for half-t distribution
-      prior.scale <- 25 # scale parameter for the half-Cauchy distirbution (see text for decision)
-    # Parameters definition
-      parameters <- c ("theta", "mu.theta", "sigma.theta")
-    data <- list ("J", "y", "sigma.y", "prior.scale")
-    # Model file
-    model_Gelman2006_HCP <- "/Users/Edoardo/DriveUni/MasterThesis/BayesianModeling/BugsModels/Gelman2006-halfCauchyPrior.txt"
-      # why relative path doesn't work?
-  # Initial values (function)
-    inits <- function (){
-      list (eta      = rnorm(J), 
-            mu.theta = rnorm(1), 
-            xi       = rnorm(1), 
-            tau.eta  = runif(1))}
-  # Simulation
-    schools.sim <- bugs (data, inits, parameters,
+#> Model 1: Uniform prior ####
+  model_Gelman2004 <- "/Users/Edoardo/DriveUni/MasterThesis/BayesianModeling/BugsModels/Gelman2004-schools.txt"
+  inits <- function(){
+    list (theta       = rnorm(J, 0, 100), 
+          mu.theta    = rnorm(1, 0, 100),
+          sigma.theta = runif(1,0,100))
+  }
+  schools.sim.UNI3 <- bugs (data, inits, parameters,
+                       model.file = model_Gelman2004,
+                       n.chains = 3, n.iter = 1000,
+                       OpenBUGS.pgm = OpenBUGS.pgm, WINE = WINE, WINEPATH = WINEPATH, useWINE = T) # very imp on mac
+  print(schools.sim.UNI3)
+  
+#> Model 2: Half Cauchy prior (half-t w/ df nu = 1) ####
+  model_Gelman2006_HCP <- "/Users/Edoardo/DriveUni/MasterThesis/BayesianModeling/BugsModels/Gelman2006-halfCauchyPrior.txt"
+  inits <- function (){
+    list (eta      = rnorm(J), 
+          mu.theta = rnorm(1), 
+          xi       = rnorm(1), 
+          tau.eta  = runif(1))}
+    schools.sim.HC <- bugs (data, inits, parameters,
                          model.file = model_Gelman2006_HCP,
                          n.chains = 3, n.iter = 1000,
                          OpenBUGS.pgm = OpenBUGS.pgm, WINE = WINE, WINEPATH = WINEPATH, useWINE = T) # very imp on mac
-  # Results
-  print(schools.sim)
-  plot(schools.sim)
-
-  # Access posterior simulations in R
-  attributes(schools.sim$sims.list)
-  hist(schools.sim$sims.list$sigma.theta,
-       yaxt = "n", ylab = ".",
-       xlim = c(0, 200),
-       main = "Posterior for btw-group sigma (3 schools)")
+  print(schools.sim.HC)
+  #plot(schools.sim.HC)
+  attributes(schools.sim.HC$sims.list)
   
+#> Results and plot ####
+  # Plots
+  par(mfcol=c(3,1))
+  # Uniform Prior on 8 schools problem
+  hist(schools.sim.UNI$sims.list$sigma.theta, 
+       yaxt = "n", ylab = ".", xlim = c(0, 200), xlab = "sigma.theta",
+       main = "8 Schools: posterior on sigma_a given uniform prior on sigma_a",
+       breaks = 40)
+  # Uniform Prior on 3 schools problem (BAD)
+  hist(schools.sim.UNI3$sims.list$sigma.theta,
+       yaxt = "n", ylab = ".", xlim = c(0, 200), xlab = "sigma.theta",
+       main = "3 Schools: posterior on sigma_a given uniform prior on sigma_a", breaks = 100)
+  # Half Cauchy prior (25)
+  hist(schools.sim.HC$sims.list$sigma.theta,
+       yaxt = "n", ylab = ".", xlim = c(0, 200), xlab = "sigma.theta",
+       main = "3 Schools: posterior on sigma_a given Half_Cauchy (25) prior on sigma_a")
   
+  # Conclusions:
+  # 1. The uniform prior disitbrution works well only when there are more than 3
+  #    groups.
+  # 2. The half cauchy prior works well even when the number of groups is small
   
   
