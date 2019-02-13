@@ -1,0 +1,13 @@
+model{
+ for (j in 1:J){
+  y[j]     ~   dnorm (theta[j], tau.y[j])  # y[j]:      observations in one cluster ~ N(theta_j, sigma^2)
+  theta[j] ~   dnorm (mu.theta, tau.theta) # theta[j]:  cluster means ~ N (mu.theta, tau.theta)
+  tau.y[j] <-  pow(sigma.y[j], -2) 	   # tau.y:     inverse-variance (1/sigma.y^2), because OpenBUGS wants 
+                                           #            precision in the normal distribution
+ }
+ mu.theta   ~  dnorm(0.0, 1.0E-6)          # mu.theta:  mean of the distribution of theta[j] (normal flat prior)
+ tau.theta  <- pow(sigma.theta, -2)        # tau.theta: variance of the distribution of theta[j] around mu
+					   #            (parameter of interest, not the dist, but the
+                   			   #            parametrisation)
+ sigma.theta ~ dunif(0, 100)               # <- UNIFORM PRIOR on btw-cluster var
+}
