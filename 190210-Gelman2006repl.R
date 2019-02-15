@@ -25,7 +25,7 @@
   
 #> Model1: Uniform Prior ####
   # Model file
-  model_Gelman2004 <- paste0(wd, "/BugsModels/Gelman2006-5_1-UNIF.txt")
+  model_Gelman2006_UNIF <- paste0(wd, "/BugsModels/Gelman2006-5_1-UNIF.txt")
   # model files should be in a BugsModels directory in your wd
   # Initial values (function)
   inits <- function(){
@@ -35,12 +35,12 @@
   }
   # Simulation
   schools.sim.UNI <- bugs (data, inits, parameters,
-                           model.file = model_Gelman2004,
+                           model.file = model_Gelman2006_UNIF,
                            n.chains = 3, n.iter = 6000, debug = FALSE,
                            OpenBUGS.pgm = OpenBUGS.pgm, WINE = WINE, WINEPATH = WINEPATH, useWINE = T) # very imp on mac
     
 #> Model2: IG(1,1) Prior ####
-  model_Gelman2004 <- paste0(wd, "/BugsModels/Gelman2006-5_1-invG11.txt")
+  model_Gelman2006_INVG11 <- paste0(wd, "/BugsModels/Gelman2006-5_1-invG11.txt")
   inits <- function (){
     list (theta     = rnorm(J, 0, 100), 
           mu.theta  = rnorm(1, 0, 100),
@@ -49,14 +49,14 @@
                                         # (and its parametrization)
   }
   schools.sim.GP <- bugs (data, inits, parameters,
-                          model.file = model_Gelman2004,
+                          model.file = model_Gelman2006_INVG11,
                           n.chains = 3, n.iter = 6000,
                           OpenBUGS.pgm = OpenBUGS.pgm, WINE = WINE, WINEPATH = WINEPATH, useWINE = T)
   print(schools.sim.GP)
   #plot(schools.sim.GP)
   
 #> Model3: IG(.001, .001) Prior ####
-  model_Gelman2004 <- paste0(wd, "/BugsModels/Gelman2006-5_1-invG001001.txt")
+  model_Gelman2006_INVG00 <- paste0(wd, "/BugsModels/Gelman2006-5_1-invG001001.txt")
   inits <- function (){
     list (theta     = rnorm(J, 0, 100), 
           mu.theta  = rnorm(1, 0, 100),
@@ -65,7 +65,7 @@
                                         # (and its parametrization)
   }
   schools.sim.GP2 <- bugs (data, inits, parameters,
-                          model.file = model_Gelman2004,
+                          model.file = model_Gelman2006_INVG00,
                           n.chains = 3, n.iter = 6000,
                           OpenBUGS.pgm = OpenBUGS.pgm, WINE = WINE, WINEPATH = WINEPATH, useWINE = T)
 
@@ -108,7 +108,7 @@
 #> Prep ####
   # DATA
     data("schools")
-    J <- 3
+    J <- 3                # 3 schools!
     y <- schools$estimate
     sigma.y <- schools$sd
   # Prior hyperparameter for half-t distribution
@@ -118,28 +118,28 @@
   data <- list ("J", "y", "sigma.y", "prior.scale")
   
 #> Model 1: Uniform prior ####
-  model_Gelman2004 <- paste0(wd, "/BugsModels/Gelman2006-5_1-UNIF.txt")
-  inits <- function(){
+  model_Gelman2006_UNIF <- paste0(wd, "/BugsModels/Gelman2006-5_1-UNIF.txt")
+  inits_UNIF <- function(){
     list (theta       = rnorm(J, 0, 100), 
           mu.theta    = rnorm(1, 0, 100),
           sigma.theta = runif(1,0,100))
   }
-  schools.sim.UNI3 <- bugs (data, inits, parameters,
-                       model.file = model_Gelman2004,
-                       n.chains = 3, n.iter = 1000,
-                       OpenBUGS.pgm = OpenBUGS.pgm, WINE = WINE, WINEPATH = WINEPATH, useWINE = T) # very imp on mac
+  schools.sim.UNI3 <- bugs(data, inits_UNIF, parameters,
+                           model.file = model_Gelman2006_UNIF,
+                           n.chains = 3, n.iter = 6000,
+                           OpenBUGS.pgm = OpenBUGS.pgm, WINE = WINE, WINEPATH = WINEPATH, useWINE = T) # very imp on mac
   print(schools.sim.UNI3)
   
 #> Model 2: Half Cauchy prior (half-t w/ df nu = 1) ####
-  model_Gelman2004 <- paste0(wd, "/BugsModels/Gelman2006-halfCauchyPrior.txt")
-  inits <- function (){
+  model_Gelman2006_HC <- paste0(wd, "/BugsModels/Gelman2006-5_2-halfCauchyPrior.txt")
+  inits_HC <- function (){
     list (eta      = rnorm(J), 
           mu.theta = rnorm(1), 
           xi       = rnorm(1), 
           tau.eta  = runif(1))}
-  schools.sim.HC <- bugs (data, inits, parameters,
-                       model.file = model_Gelman2004,
-                       n.chains = 3, n.iter = 1000,
+  schools.sim.HC <- bugs (data, inits_HC, parameters,
+                       model.file = model_Gelman2006_HC,
+                       n.chains = 3, n.iter = 6000,
                        OpenBUGS.pgm = OpenBUGS.pgm, WINE = WINE, WINEPATH = WINEPATH, useWINE = T) # very imp on mac
   print(schools.sim.HC)
   #plot(schools.sim.HC)
@@ -152,11 +152,12 @@
   hist(schools.sim.UNI$sims.list$sigma.theta, 
        yaxt = "n", ylab = ".", xlim = c(0, 200), xlab = "sigma.theta",
        main = "8 Schools: posterior on sigma_a given uniform prior on sigma_a",
-       breaks = 40)
+       breaks = 20)
   # Uniform Prior on 3 schools problem (BAD)
   hist(schools.sim.UNI3$sims.list$sigma.theta,
        yaxt = "n", ylab = ".", xlim = c(0, 200), xlab = "sigma.theta",
-       main = "3 Schools: posterior on sigma_a given uniform prior on sigma_a", breaks = 40)
+       main = "3 Schools: posterior on sigma_a given uniform prior on sigma_a",
+       breaks = 100)
   # Half Cauchy prior (25)
   hist(schools.sim.HC$sims.list$sigma.theta,
        yaxt = "n", ylab = ".", xlim = c(0, 200), xlab = "sigma.theta",

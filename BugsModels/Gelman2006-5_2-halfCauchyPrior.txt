@@ -6,23 +6,27 @@ model {
  # Part 1: y_ij distribution
  for (j in 1:J){                           # J = the number of schools
      y[j] ~ dnorm(theta[j], tau.y[j])      # data model:  the likelihood
-      theta[j] <- mu.theta + xi*eta[j]     # group means: fixed + random
+      theta[j] <- mu.theta + xi * eta[j]     # group means: fixed + random 
       tau.y[j] <- pow(sigma.y[j], -2)      # precision (inverse of sigma.y^2)
  }
 
- # Part 2: xi distribution
+ # Part 2.1: xi distribution
  xi ~ dnorm(0, tau.xi)                # we are assuming a normal distribution for xi
  tau.xi <- pow(prior.scale, -2)       # pow = power, prior.scale^(-2), the prior scale is
 				      # defined based on ... (the 25)
 
- # Part 3: eta_j distribution
+ # Part 2.2: eta_j distribution
  for (j in 1:J){
-   eta[j] ~ dnorm(0, tau.eta)         # hierarchical model for theta
+   eta[j] ~ dnorm(0, tau.eta)         # hierarchical model for theta (group means ~ N(0, sigma.eta^-2))
  }
 
- tau.eta ~ dgamma(.5, .5)             # chi^2 with 1 d.f.
- sigma.theta <- abs(xi)/sqrt(tau.eta) # cauchy = normal/sqrt(chi^2)
- mu.theta ~ dnorm(0.0, 1.0E-6)        # noninformative prior on mu
+ tau.eta ~ dgamma(.5, .5)               # the inverse gamma of sigma.eta = gamma for the inverse of sigma.eta, 
+				        # chi^2 with 1 d.f. (nu = 1)
+ sigma.theta <- abs(xi)/sqrt(tau.eta)   # = |xi|*sigma.eta, 
+					# folded-noncentral-t = abs(normal random var)/sqrt(chi^2),
+					# then make it cauchy with parameters choices (mu = 0, nu = 1)
+
+ mu.theta ~ dnorm(0.0, 1.0E-6)          # noninformative prior on mu
 }
 
 

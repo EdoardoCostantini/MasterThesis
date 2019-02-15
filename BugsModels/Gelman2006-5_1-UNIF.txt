@@ -9,5 +9,5 @@ model{
  tau.theta  <- pow(sigma.theta, -2)        # tau.theta: variance of the distribution of theta[j] around mu
 					   #            (parameter of interest, not the dist, but the
                    			   #            parametrisation)
- sigma.theta ~ dunif(0, 100)               # <- UNIFORM PRIOR on btw-cluster var
+ sigma.theta ~ dunif(0, 1000)               # <- UNIFORM PRIOR on btw-cluster var
 }
