@@ -77,6 +77,24 @@
     #print(schools.sim.GP)
     print(schools.sim.GP2)
     #plot(schools.sim.GP2)
+  # Mean, median and bias
+    # Mean
+    post_mean <- apply(cbind(schools.sim.UNI$sims.list$sigma.theta, 
+                             schools.sim.GP$sims.list$sigma.theta,
+                             schools.sim.GP2$sims.list$sigma.theta),
+                       2, mean)
+    post_median <- apply(cbind(schools.sim.UNI$sims.list$sigma.theta, 
+                               schools.sim.GP$sims.list$sigma.theta,
+                               schools.sim.GP2$sims.list$sigma.theta),
+                         2, median)
+    # To me it seems that the median is actually worst with the inv-gamma than with the 
+    # mean as point estimate. In Browne and Draper it is found that the relative bias
+    # is higehr with the mean than with the median as point estimate, and that it is
+    # higher when using the uniform than when using the inv-gamma (see table 4, p16).
+    # - Same model is used in both papers except sigma.y considered as known in Gelman
+    #   (in Browne same prior is used for sigma.y and sigma.u, sigma.y is the error variance)
+    # - Same priors in both paper (e = .001 in both at least for the inv-gamma)
+    #   uniform prior in Gelman is U(0, 100) (I think), instead of U(0, 1000) (as in Browne).
     
   # Posterior Plots
     par(mfcol=c(3,1))
