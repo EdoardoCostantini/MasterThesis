@@ -1,5 +1,6 @@
 # Replicate findings in Gelman 2006
 # Trying to replicate what was done in Gelman2006
+#source("190210-Gelman2006repl.R")
 
 # Sources: Gelman2006
 # Set up
@@ -36,7 +37,8 @@
   # Simulation
   schools.sim.UNI <- bugs (data, inits, parameters,
                            model.file = model_Gelman2006_UNIF,
-                           n.chains = 3, n.iter = 6000, debug = FALSE,
+                           n.chains = 3, n.iter = 6000, n.burnin = 1000, 
+                           debug = FALSE,
                            OpenBUGS.pgm = OpenBUGS.pgm, WINE = WINE, WINEPATH = WINEPATH, useWINE = T) # very imp on mac
     
 #> Model2: IG(1,1) Prior ####
@@ -50,7 +52,7 @@
   }
   schools.sim.GP <- bugs (data, inits, parameters,
                           model.file = model_Gelman2006_INVG11,
-                          n.chains = 3, n.iter = 6000,
+                          n.chains = 3, n.iter = 6000, n.burnin = 1000,
                           OpenBUGS.pgm = OpenBUGS.pgm, WINE = WINE, WINEPATH = WINEPATH, useWINE = T)
   print(schools.sim.GP)
   #plot(schools.sim.GP)
@@ -66,7 +68,7 @@
   }
   schools.sim.GP2 <- bugs (data, inits, parameters,
                           model.file = model_Gelman2006_INVG00,
-                          n.chains = 3, n.iter = 6000,
+                          n.chains = 3, n.iter = 6000, n.burnin = 1000,
                           OpenBUGS.pgm = OpenBUGS.pgm, WINE = WINE, WINEPATH = WINEPATH, useWINE = T)
 
 #> Results and plot ####
@@ -87,6 +89,17 @@
                                schools.sim.GP$sims.list$sigma.theta,
                                schools.sim.GP2$sims.list$sigma.theta),
                          2, median)
+    
+    data.frame(mean = apply(cbind(schools.sim.UNI$sims.list$sigma.theta, 
+                                  schools.sim.GP$sims.list$sigma.theta,
+                                  schools.sim.GP2$sims.list$sigma.theta),
+                            2, mean),
+               median = apply(cbind(schools.sim.UNI$sims.list$sigma.theta, 
+                                    schools.sim.GP$sims.list$sigma.theta,
+                                    schools.sim.GP2$sims.list$sigma.theta),
+                              2, median)
+    )
+
     # To me it seems that the median is actually worst with the inv-gamma than with the 
     # mean as point estimate. In Browne and Draper it is found that the relative bias
     # is higehr with the mean than with the median as point estimate, and that it is
@@ -101,17 +114,17 @@
   # Uniform
   hist(schools.sim.UNI$sims.list$sigma.theta,
        yaxt = "n", ylab = ".", xlim = c(0, 30), xlab = "sigma.theta",
-       main = "8 Schools: posterior on sigma_a given uniform prior on sigma_a",
+       main = "8 Schools: sigma_a posterior (uniform prior on sigma_a)",
        breaks = 40)
   # IG(1, 1)
   hist(schools.sim.GP$sims.list$sigma.theta,
        yaxt = "n", ylab = ".", xlim = c(0, 30), xlab = "sigma.theta",
-       main = "8 Schools: posterior on sigma_a given IG(1,1) prior on sigma_a**2",
+       main = "8 Schools: sigma_a posterior (IG(1,1) prior on sigma_a**2)",
        breaks = 50)
   # IG(.001,.001)
   hist(schools.sim.GP2$sims.list$sigma.theta,
        yaxt = "n", ylab = ".", xlim = c(0, 30), xlab = "sigma.theta",
-       main = "8 Schools: posterior on sigma_a given IG(.001,.001) prior on sigma_a**2",
+       main = "8 Schools: sigma_a posterior (IG(.001,.001) prior on sigma_a**2)",
        breaks = 50)
   # Conclusions:
   # 1) Uniform Prior density supports for range of values for sigma.theta 
