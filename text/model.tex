@@ -1,0 +1,183 @@
+%        File: model.tex
+
+\documentclass[a4paper]{article}
+
+% Packages
+\usepackage{bm} % for math bold
+
+\begin{document}
+Here I define the Bayesian model I want to use to test the performance of the different priors. The features I want to include are the folowing: continuous outcome, any number/measurement scale.
+
+Let's start with the \textbf{model}
+
+\begin{equation}
+	y_{ij} = \bm{x}^{T}_{ij} \bm{\theta} + \bm{z}^{T}_{ij}\bm{b}_i + \epsilon_{ij}
+\end{equation}
+
+$ \bm{b}_i \sim N(\bm{0}, \bm{\Psi}) $
+
+$ \epsilon_{ij} \sim N(0, \sigma^2) $
+
+\vspace{5mm}
+
+(Vectors are in bold, amtrix are capital greek letters).\\
+I'm going to define the following \textbf{priors}:
+
+\vspace{5mm}
+
+
+
+\begin{equation}
+p(\bm{\theta}) \propto 1
+\end{equation}
+
+\begin{equation}
+p(\sigma^2) \propto \sigma^{-2}
+\end{equation}
+
+\begin{equation}
+p(\bm{\Psi}) \propto [...]
+\end{equation}
+
+\vspace{5mm}
+
+The derivation of the conditional posterior follows.
+
+\paragraph{Full conditional for $\bm{\theta}$}(fixed effects) \\
+
+Let's start with
+
+\begin{equation}
+	p(\bm{\theta}|\bm{y}, \bm{X}, \bm{Z}, \bm{b}_{i}, \bm{\Psi}, \sigma^2) = 	p(\bm{y}|\bm{\theta}, \bm{X}, \bm{Z}, \bm{b}_{i}, \bm{\Psi}, \sigma^2) p(\bm{\theta})
+\end{equation}
+
+where\\
+
+$p(\bm{y}|\bm{\theta}, \bm{X}, \bm{Z}, \bm{\Psi}, \sigma^2) = \prod_{i=1}^n \prod_{j=1}^Jp(y_{ij}|\bm{\theta}^{T}\bm{x}_{ij} + \bm{b}_{i}^{T}\bm{z}_{ij}, \bm{\Psi}, \sigma^2) \propto exp(-\frac{1}{2\sigma^2}SSR)$ \\
+
+and\\
+
+$SSR = \sum_{i = 1}^{n}[\sum_{j = 1}^{J}( y_{ij}-\bm{\theta}^{T}\bm{x}_{ij} - \bm{b}_{i}^{T}\bm{z}_{ij})^2]$
+
+where can rewrite $y_{ij}$ as $\tilde{y}_{ij}$, with $\tilde{y}_{ij} = y_{ij} - \bm{b}^{T}_{i}\bm{z}_{ij}$. This would turn SSR in:\\
+
+$SSR = \sum_{i = 1}^{n}[\sum_{j = 1}^{J}( \tilde{y}_{ij}-\bm{\theta}^{T}\bm{x}_{ij})^2 ] =$
+
+$= ( \tilde{\bm{y}} - \bm{X}\bm{\theta} )^{T}( \tilde{\bm{y}} - \bm{X}\bm{\theta} )$
+
+$ = \tilde{\bm{y}}^{T}\tilde{\bm{y}} - 2\bm{\theta}^{T}\bm{X}\tilde{\bm{y}} + \bm{\theta}^{T}\bm{X}^{T}\bm{X}\bm{\theta}$\\
+
+Hence,
+\begin{equation}
+p(\bm{y}|\bm{\theta}, \bm{X}, \bm{Z}, \bm{\Psi}, \sigma^2) \propto exp(-\frac{1}{2\sigma^2}[- 2\bm{\theta}^{T}\bm{X}\tilde{\bm{y}} + \bm{\theta}^{T}\bm{X}^{T}\bm{X}\bm{\theta}])
+\end{equation}
+
+
+Combining this with the prior we obtain:
+
+\begin{equation}
+	p(\bm{\theta}|\bm{y}, \bm{X}, \bm{Z}, \bm{\Psi}, \sigma^2) \propto exp(-\frac{1}{2}\bm{\theta}^{T}\bm{X}^{T}\bm{X}\bm{\theta} + \bm{\theta}^{T}\bm{X}\tilde{\bm{y}})
+\end{equation}
+
+\begin{equation}
+	p(\bm{\theta}|\bm{y}, \bm{X}, \bm{Z}, \bm{\Psi}, \sigma^2) \sim multivariate-N(\frac{(\bm{X}^{T}\bm{X})^{-1}\bm{X}\bm{\tilde{y}}}{\sigma^2}, \frac{(\bm{X}^{T}\bm{X})^{-1}}{\sigma^2})
+\end{equation}
+
+\paragraph{Full conditional for $\bm{b}_{i}$} (random effects)
+
+To derive this one we can start from:
+
+\begin{equation}
+	p(\bm{b}_{i}|\bm{y}, \bm{X}, \bm{Z}, \bm{\theta}, \bm{\Psi}, \sigma^2) = 	p(\bm{y_{i}}|\bm{\theta}, \bm{b}_{i}, \bm{X}, \bm{Z}, \bm{\Psi}, \sigma^2) p(\bm{b}_{i})
+\end{equation}
+
+We know that \\
+
+$p(\bm{y}_{i}|.) = \prod_{j=1}^{J}p(y_{ij}|\bm{\theta}^{T}\bm{x}_{ij} + \bm{b}_{i}^{T}\bm{z}_{ij}, \sigma^2) \propto exp(-\frac{1}{2\sigma^2}SSR_{i})$\\
+
+with\\
+
+$SSR = \sum_{j = 1}^{J}( y_{ij}-\bm{\theta}^{T}\bm{x}_{ij} - \bm{b}_{i}^{T}\bm{z}_{ij})^2$
+
+and we can rewrite $y_{ij}$ as $\tilde{y}_{ij} = y_{ij} - \bm{\theta}^{T}\bm{x}_{ij}$, which would make SSR be\\
+
+$SSR = \sum_{j = 1}^{J}( \tilde{y}_{j}-\bm{\theta}^{T}\bm{x}_{j})^2=$
+
+$= ( \tilde{\bm{y}} - \bm{b}_{i}^{T}\bm{Z}_{i})^{T}( \tilde{\bm{y}} - \bm{b}_{i}^{T}\bm{Z}_{i})$
+
+$ = \tilde{\bm{y}}^{T}\tilde{\bm{y}} - 2\bm{b}_{i}^{T}\bm{Z}_{j}\tilde{\bm{y}} + \bm{b}_{i}^{T}\bm{Z}^{T}_{i} \bm{Z}_{j}\bm{b}_{i}$\\
+
+Hence,
+\begin{equation}
+	p(\bm{y}_{i}|.) \propto exp(-\frac{1}{2\sigma^2}[- 2\bm{b}_{i}^{T}\bm{Z}_{j}\tilde{\bm{y}} + \bm{b}_{i}^{T}\bm{Z}^{T}_{i} \bm{Z}_{j}\bm{b}_{i}])
+\end{equation}
+
+We also know that in this case, the "prior" is
+
+\begin{equation}
+p(\bm{b}_{i}) \propto N(\bm{0}, \bm{\Psi}) \propto exp(-\frac{1}{2}[-2\bm{b}_{i}^{T}\bm{\Psi}^{-1}\bm{0} + \bm{b}_{i}^{T}\bm{\Psi}^{-1}\bm{b}_{i}])
+\end{equation}
+
+In conclusion, combining the sampling model and the prior, we get:
+
+\begin{equation}
+	p(\bm{b}_{i}|.) \propto 	
+	exp(
+	-\frac{1}{2\sigma^2}[- 2\bm{b}_{i}^{T}\bm{Z}_{j}\tilde{\bm{y}} + \bm{b}_{i}^{T}\bm{Z}^{T}_{i} \bm{Z}_{j}\bm{b}_{i}]
+	-\frac{1}{2\sigma^2}[- 2\bm{b}_{i}^{T}\bm{Z}_{j}\tilde{\bm{y}} + \bm{b}_{i}^{T}\bm{Z}^{T}_{i} \bm{Z}_{j}\bm{b}_{i}]) 
+\end{equation}
+
+\begin{equation}
+	p(\bm{b}_{i}|.) 	\propto 	multiv-N((\Psi^{-1} + \frac{\bm{Z}_{i}^{T}\bm{Z}_{i}}{\sigma^2})^{-1}(\bm{\Psi}^{-1}\bm{0}+\frac{\bm{Z}_{i}^{T}\tilde{y}_{i}}{\sigma^2}), (\Psi^{-1} + \frac{\bm{Z}_{i}^{T}\bm{Z}_{i}}{\sigma^2})^{-1})	
+\end{equation}
+
+
+\paragraph{Full conditional for $\sigma^2$}(error variance)
+The full conditional posterior can be expressed as:
+
+\begin{equation}
+	p(\sigma^2|\bm{y}, \bm{X}, \bm{Z}, \bm{\theta}, \bm{b}_{i}, \bm{\Psi}) = 	p(\bm{y}|\bm{\theta}, \bm{b}_{i}, \bm{X}, \bm{Z}, \bm{\Psi}, \sigma^2) p(\sigma^2)
+\end{equation}
+
+The sampling model is the same we saw for the full conditional distribution of $\bm{\theta}$:\\
+
+$p(\bm{y}|\bm{\theta}, \bm{X}, \bm{Z}, \bm{\Psi}, \sigma^2) = \prod_{i=1}^n \prod_{j=1}^Jp(y_{ij}|\bm{\theta}^{T}\bm{x}_{ij} + \bm{b}_{i}^{T}\bm{z}_{ij}, \bm{\Psi}, \sigma^2)=$
+
+$ = \prod_{i=1}^{n} \prod_{j=1}^{J}(2\pi\sigma^{-2})^{-\frac{1}{2}}exp(-\frac{(y_{ij} - \bm{\theta}^{T}\bm{x}_{ij} - \bm{b}_{i}^{T}\bm{z}_{ij})^2}{2\sigma^2})$\\
+
+However, we are now interested in $\sigma^2$, hence\\
+
+$p(\bm{y}|\bm{\theta}, \bm{X}, \bm{Z}, \bm{\Psi}, \sigma^2) \propto (\sigma^{2})^{-\frac{N}{2}}exp(-\frac{\sum_{i = 1}^{n}\sum_{j = 1}^{J}( y_{ij}-\bm{\theta}^{T}\bm{x}_{ij} - \bm{b}_{i}^{T}\bm{z}_{ij})^2 }{2\sigma^2})$
+$=(\sigma^{2})^{-\frac{N}{2}}exp(-\frac{1}{2\sigma^2}SSR)$ \\
+
+where $N = \sum_{i}^{n}nj_{i}$ is the entire sample size (all observations within all clusters).\\
+
+The prior for $\sigma$ is given above, and therefore we can write the full conditional posterior as:
+
+\begin{equation}
+	p(\sigma^2|\bm{y}, \bm{X}, \bm{Z}, \bm{\theta}, \bm{b}_{i}, \bm{\Psi}) \propto (\sigma^{2})^{-\frac{N}{2}-1}exp(-\frac{1}{2\sigma^2}SSR)
+\end{equation}
+
+\begin{equation}
+	p(\sigma^2|\bm{y}, \bm{X}, \bm{Z}, \bm{\theta}, \bm{b}_{i}, \bm{\Psi}) \sim IG(\frac{N}{2}, \frac{SSR}{2})
+\end{equation}
+
+
+
+\paragraph{Full conditional for $\bm{\Psi}$}(random effects variance covariance matrix)\\
+
+See Mulder Pericchi, 2018
+
+\paragraph{Notation Conventions}
+
+\begin{itemize}
+	\item $n$ number of clusters; $i$ specific cluster
+	\item $J$ number of observations within cluster; $j$ specific observation
+	\item $N$ total number of observations
+\end{itemize}
+
+
+
+\end{document}
+
+
