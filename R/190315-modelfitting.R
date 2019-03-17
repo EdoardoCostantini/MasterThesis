@@ -121,3 +121,14 @@
        xlab = "Intercept Variance")
       abline(v = mean(out3[[which_n]][[9]][,1]), col = "blue", lwd = 2)
       abline(v = median(out3[[which_n]][[9]][,1]), col = "red", lwd = 2)
+      
+      
+      
+      # Scrop notes for starting values
+      
+        theta  <- t(rep(0, ncol(Xmat))) #fixef(fit)
+        Psi    <- matrix(c(1,0,0,1), ncol = 2) #matrix(VarCorr(fit)[[1]][1:4], ncol = 2)
+        PsiInv <- solve(Psi)        # var-covar matrix of random effects estimated with glmer
+        sigma2 <- 1 #attr(VarCorr(fit), "sc")
+        bMat   <- matrix(rep(0, n*2), ncol = 2) #as.matrix(ranef(fit)$cluster)
+        
