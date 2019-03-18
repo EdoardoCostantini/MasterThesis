@@ -28,7 +28,7 @@ draw_theta = function(yvec,Xmat,Zi,bMat,sigma2){
   
 }
 
-draw_bMat = function(yvec,Xmat,Zi,theta,bi0,bMat,sigma2,PsiInv){
+draw_bMat = function(yvec,Xmat,Zi,theta,bi0,bMat,sigma2,PsiInv,n,J){
   
   ytilde = yvec - c(Xmat%*%theta)
   for(i in 1:n){
@@ -43,7 +43,7 @@ draw_bMat = function(yvec,Xmat,Zi,theta,bi0,bMat,sigma2,PsiInv){
 
 # sigma^2 (within group variance)
   # sigma^(-2) prior
-draw_sigam2_IMPprior = function(yvec,Xmat,Zi,theta,bMat){
+draw_sigam2_IMPprior = function(yvec,Xmat,Zi,theta,bMat,n,J){
   
   SSR <- t(yvec - Xmat %*% theta - c(Zi %*% t(bMat))) %*% (yvec - Xmat %*% theta - c(Zi %*% t(bMat)))
   sigma2Draw <- rinvgamma(1, (J*n)/2, (SSR)/2)
@@ -62,7 +62,7 @@ draw_sigam2_IGprior = function(nu0,sigma20){
 
 # Psi Matrix draws
 # Using Mat-F prior
-draw_PsiInv_MF = function(yvec,Xmat,Zi,PsiInv,Omega,B0Inv){
+draw_PsiInv_matF = function(yvec,Xmat,Zi,bMat,PsiInv,Omega,B0Inv,n){
   
   #credits for function: Mulder Pericchi, 2018
   ScaleMatrix = t(bMat)%*%bMat + Omega # current data estimation of random effect covariance matrix
@@ -71,14 +71,15 @@ draw_PsiInv_MF = function(yvec,Xmat,Zi,PsiInv,Omega,B0Inv){
                      S = solve(ScaleMatrix))
   
   ScaleOmega = solve(PsiInvDraw + B0Inv)
-  Omega = rwish(v = 4,                 # k = 4 (4 predicotrs: intercept, time, covariate, time*covariate)
+  Omega = rwish(v = 4,                # k = 4 (4 predicotrs: intercept, time, covariate, time*covariate)
                 S = ScaleOmega)
   
   return(list(PsiInvDraw,Omega))
   
 }
 
-draw_PsiInv_HW = function(PsiInv,avec,bMat){
+# Using Huang and Wand 2018 inv-Wish
+draw_PsiInv_HW = function(PsiInv,avec,bMat,n){
   #credits for function: Mulder Pericchi, 2018
   #prior of Huang & Wand with scale A_k=10^5 and nu=2.
   Ak = 10**5
@@ -94,6 +95,15 @@ draw_PsiInv_HW = function(PsiInv,avec,bMat){
                    scale = scale_avec)
   
   return(list(PsiInvDraw,avec))
+}
+
+# Using prior invW(nu0, solve(S0))
+  # where S0 is a prior guess for the random effects var-cov matrix
+draw_PsiInv_InvWish = function(n,bMat,S0=diag(2)){
+  ScaleMatrix = t(bMat)%*%bMat + S0
+  PsiInvDraw = rwish(v = n + 2,                 # nu0 = 2
+                     S = solve(ScaleMatrix))
+  return(PsiInvDraw)
 }
 
 

@@ -4,131 +4,90 @@
 ###              model.pdf file in text/.
 ### Date:        2019-03-15
 
+# Load Sampling functions
+  #setwd("/Users/Edoardo/DriveUni/MasterThesis/BayesianThesis")
+  source("./R/190313-normalmod-functions.R")
+  source("./R/190317-MCMC-functions.R")
+
 # Load some data
   RiesbyDat <- read.table("./data/RiesbyDat.txt")
   
-  # Make it digestable for the functions
-  yvec     <- RiesbyDat$depr
-  Xmat     <- cbind(rep(1, nrow(RiesbyDat)), RiesbyDat$week, RiesbyDat$endog, RiesbyDat$week*RiesbyDat$endog)
-  J        <- length(unique(RiesbyDat$week))
-  n        <- nrow(RiesbyDat)/J
-  Zi       <- cbind(rep(1,length = J), unique(Xmat[, 2]))
-  subjects <- RiesbyDat$id
+  dat_yvec     <- RiesbyDat$depr
+  dat_Xmat     <- cbind(rep(1, nrow(RiesbyDat)), RiesbyDat$week, RiesbyDat$endog, RiesbyDat$week*RiesbyDat$endog)
+  dat_J        <- length(unique(RiesbyDat$week))
+  dat_n        <- nrow(RiesbyDat)/dat_J
+  dat_Zi       <- cbind(rep(1,length = dat_J), unique(dat_Xmat[, 2]))
+  dat_subjects <- RiesbyDat$id
 
-# Define priors
-  B0       <- 10**3*diag(2)
-  B0Inv    <- solve(B0)
-  nu0      <- .001
-  sigma20  <- .001
-  bi0      <- rep(0, ncol(Zi))
-  theta0   <- rep(0, ncol(Xmat)) #c(22, -2, 2, -.2) #rep(0, ncol(Xmat))
-  Sigma0   <- t(Xmat) %*% Xmat/(n*3)       # Think about what should this guess be
-
-# Define initial Values
-  fit <- lmer(depr ~ week + endog + inter + (1 + week | id), data = RiesbyDat, REML = FALSE)
+# Define psi priors
+  B0_pn  <- 1e3*diag(2) # mat-f proper neighbour guess
+  B0_iW  <- diag(2) # guess of inverse Wishart prior that shou,d ressamble the IG(e,e) from Gelman
+  Rstart <- solve(t(dat_Zi)%*%dat_Zi)
   
-  theta  <- c(10, 10, 10, 10) #fixef(fit)
-  Psi    <- matrix(c(5,0,0,5), ncol = 2) #matrix(VarCorr(fit)[[1]][1:4], ncol = 2)
-  PsiInv <- solve(Psi)        # var-covar matrix of random effects estimated with glmer
-  sigma2 <- 1 #attr(VarCorr(fit), "sc")
-  bMat   <- as.matrix(ranef(fit)$id)
-  Omega  <- B0
-  avec = rep(100,2)
-  
+  # Educated Guess
+    intercept <- rep(NA, dat_n)
+    slope     <- rep(NA, dat_n)
+    i <- 1
+    for (id in 1:dat_n) {
+      #print(paste("Before:", i))
+      fit <- lm(dat_yvec[i:(i+5)] ~ scale(dat_Xmat[i:(i+5), 2]))
+      intercept[[id]] <- coef(fit)[1]
+      slope[[id]]     <- coef(fit)[2]
+      
+      i <- i+6
+      #print(paste("After:", i))
+    }
+    vi <- var(intercept)
+    vs <- var(slope)
+  B0_ed  <- matrix(c(vi, 0, 0, vs), ncol = 2) # guess based on data exploration and knowledge
+    
 # Run MCMC
-  samsize <- 2000
-  burnin  <- 1/10
-  MbetaA   = matrix(0,nrow=samsize,ncol=ncol(Xmat))
-  MPsiA    = matrix(0,nrow=samsize,ncol=ncol(Zi)*2)
-  MOmegaA  = matrix(0,nrow=samsize,ncol=ncol(Zi)*2)
-  MbMatA   = matrix(0,nrow=samsize,ncol=n*2)
-  MavecA = matrix(0,nrow=samsize,ncol=2)
-  
-  #MimpwA   = matrix(0,nrow=samsize,ncol=1)
-  
-  #burn-in
-  for(ss in 1:(samsize*burnin)){
-    print(paste("Burn-in:", ss))
-    
-    theta    <- draw_theta(yvec,Xmat,Zi,theta0,Sigma0,bMat)
-    bMat     <- draw_bMat_A(yvec,Xmat,Zi,theta,bi0,bMat)
-    sigma2   <- draw_sigam2(nu0, sigma20)
-    # outDummy <- draw_PsiInv_MSBeta2(yvec,Xmat,Zi,PsiInv,Omega,B0Inv)
-    #   PsiInv <- outDummy[[1]]
-    #   Omega  <- outDummy[[2]]
-    outDummy = draw_PsiInv_HW(PsiInv,avec,bMat)
-      PsiInv = outDummy[[1]]
-      avec = outDummy[[2]]
-    
-    MbetaA[ss,]   = theta
-    MbMatA[ss,]   = c(bMat)
-    # MPsiA[ss,]    = c(solve(PsiInv))
-    # MOmegaA[ss,]  = Omega
-    MPsiA[ss,] = c(solve(PsiInv))
-    MavecA[ss,] = avec
-  }
-  for(ss in 1:samsize){
-    print(paste("Post-Sample:", ss))
-    
-    theta    <- draw_theta(yvec,Xmat,Zi,theta0,Sigma0,bMat)
-    bMat     <- draw_bMat_A(yvec,Xmat,Zi,theta,bi0,bMat)
-    sigma2   <- draw_sigam2(nu0, sigma20)
-    # outDummy <- draw_PsiInv_MSBeta2(yvec,Xmat,Zi,PsiInv,Omega,B0Inv)
-    #   PsiInv <- outDummy[[1]]
-    #   Omega  <- outDummy[[2]]
-    outDummy = draw_PsiInv_HW(PsiInv,avec,bMat)
-      PsiInv = outDummy[[1]]
-      avec = outDummy[[2]]
-    
-    MbetaA[ss,]   = theta
-    MbMatA[ss,]   = c(bMat)
-    # MPsiA[ss,]    = c(solve(PsiInv))
-    # MOmegaA[ss,]  = Omega
-    MPsiA[ss,] = c(solve(PsiInv))
-    MavecA[ss,] = avec
-  }
-  #out1 <- list(MbetaA,MbMatA,MPsiA,MOmegaA)
-  out1 <- list(MbetaA,MbMatA,MPsiA,MavecA)
-  
-  which_o <- 1
-  which_c <- 1
-  plot(1:samsize,out1[[which_o]][,which_c],"l")
-  mean(out1[[which_o]][,which_c])
-  median(out1[[which_o]][,which_c])
-  # Compare with lme results
-  fit
-  hist(out1[[which_o]][,which_c], breaks = 100,
-       xlab = "Intercept Variance")
-      abline(v = mean(out1[[which_o]][,which_c]), col = "blue", lwd = 2)
-      abline(v = median(out1[[which_o]][,which_c]), col = "red", lwd = 2)
-  
-# Posterior Distributions
-# With Histograms
-  pdf(paste0("./output/GPAdat_", "n", conds[which_n], ".pdf"))
-  par(mfcol = c(3,3))
-  
-      
-      
-  hist(out2[[which_n]][[9]][,1], breaks = 100,
-       main = "mat-F w/ 1e3*I",
-       #xlim = c(0, 20), ylim = c(0, 1500),
-       xlab = "Intercept Variance")
-      abline(v = mean(out2[[which_n]][[9]][,1]), col = "blue", lwd = 2)
-      abline(v = median(out2[[which_n]][[9]][,1]), col = "red", lwd = 2)
-  hist(out3[[which_n]][[9]][,1], breaks = 100,
-       main = "inv-Wish HW2013",
-       #xlim = c(0, 20), ylim = c(0, 1500),
-       xlab = "Intercept Variance")
-      abline(v = mean(out3[[which_n]][[9]][,1]), col = "blue", lwd = 2)
-      abline(v = median(out3[[which_n]][[9]][,1]), col = "red", lwd = 2)
-      
-      
-      
-      # Scrop notes for starting values
-      
-        theta  <- t(rep(0, ncol(Xmat))) #fixef(fit)
-        Psi    <- matrix(c(1,0,0,1), ncol = 2) #matrix(VarCorr(fit)[[1]][1:4], ncol = 2)
-        PsiInv <- solve(Psi)        # var-covar matrix of random effects estimated with glmer
-        sigma2 <- 1 #attr(VarCorr(fit), "sc")
-        bMat   <- matrix(rep(0, n*2), ncol = 2) #as.matrix(ranef(fit)$cluster)
-        
+  MCMC_reps   <- 2000
+  MCMC_burnin <- 1/10
+
+  output <- vector("list", 5)
+  output[[1]] <- MCMC_HWprior(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
+                       iniv = 0
+                       )
+  output[[2]] <- MCMC_invWish(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
+                       iniv = 0,
+                       B0   = B0_iW
+                       )
+  output[[3]] <- MCMC_matF(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
+                    iniv = 1,
+                    B0   = B0_pn
+                    )
+  output[[4]] <- MCMC_matF(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
+                    iniv = 1,
+                    B0   = B0_ed # B_edug is the informed guess
+                    )
+  output[[5]] <- MCMC_matF(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
+                    iniv = 1,
+                    B0   = Rstar # Rstar is the emprical guess
+                    )
+# Results Exploration
+  # Output selection
+  which_r <- 1 # which result (which prior)
+  which_p <- 3 # which object (which parameters type)
+  which_c <- 1 # which column in object (which parameter)
+  # Traceplot
+    plot(1:MCMC_reps, output[[which_r]][[which_p]][,which_c],"l")
+  # Estimates
+    mean(output[[which_r]][[which_p]][,which_c])
+    median(output[[which_r]][[which_p]][,which_c])
+    # Compare with lme results
+    fit
+  # Posteriors
+    hist(output[[which_r]][[which_p]][,which_c], breaks = 100,
+         xlab = "Intercept Variance")
+    abline(v = mean(output[[which_r]][[which_p]][,which_c]), col = "blue", lwd = 2)
+    abline(v = median(output[[which_r]][[which_p]][,which_c]), col = "red", lwd = 2)
+    plot(df(vi, 2, 1))
+    varseq <- seq(0, 40, length=1e4)
+    plot(varseq,
+         df(varseq, 2, 1),
+         col = 2)
+    lambdaseq <- seq(0,10,length=1e4)
+    plot(lambdaseq,
+         dgamma(lambdaseq, 2, 1),
+         col = 2)

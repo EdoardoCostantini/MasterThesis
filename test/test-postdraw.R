@@ -1,4 +1,8 @@
-# Testing checkHTLM function (w/ manually coded reference)
+### Project:     Master Thesis
+### Object:      TEST of posterior draws functions
+### Description: Contains the tests for all the posterior functions you defined. Different aspects of the functions
+###              (e.g. dimensionality of output) can and should be tested here
+### Date:        2019-03-17
 
 context('POSTERIOR DRAWS functions')
 
@@ -31,6 +35,8 @@ context('POSTERIOR DRAWS functions')
       
     bi0   <- rep(0, ncol(Zi))
     avec   <- rep(100,2)
+    B0 <- 1e3*diag(2)
+    B0Inv <- solve(B0)
     
   # Initial values (a good approximation of the output of an s repetition in MCMC)
     
@@ -40,6 +46,7 @@ context('POSTERIOR DRAWS functions')
       PsiInv <- solve(Psi)        # var-covar matrix of random effects estimated with glmer
       sigma2 <- attr(VarCorr(fit), "sc")
       bMat   <- as.matrix(ranef(fit)$cluster)
+      Omega = B0
 
 # Define tests of interest
 # Test: draw_theta ####
@@ -49,35 +56,35 @@ context('POSTERIOR DRAWS functions')
   benchmark <- c(4, 1) # it should be a vector of length 4
 
   # test
-  test_that('TEST: draw_theta - dimensionality', {
+  test_that('TEST: theta - dimensionality', {
     expect_equal(tocheck, benchmark)
   })
 
 # Test: draw_bMat ####
 
-  bMat_test <- draw_bMat(yvec,Xmat,Zi,theta,bi0,bMat,sigma2,PsiInv)
+  bMat_test <- draw_bMat(yvec,Xmat,Zi,theta,bi0,bMat,sigma2,PsiInv,n,J)
   tocheck   <- dim(bMat_test)
   benchmark <- c(46, 2)
 
   # test
-  test_that('TEST: draw_bMat - dimensionality', {
+  test_that('TEST: bMat - dimensionality', {
     expect_equal(tocheck, benchmark)
   })
 
 # Test: draw_sigam2_IMPprior ####
 
-  sigma2_test    <- draw_sigam2_IMPprior(yvec,Xmat,Zi,theta,bMat)
+  sigma2_test    <- draw_sigam2_IMPprior(yvec,Xmat,Zi,theta,bMat,n,J)
   tocheck   <- length(sigma2_test)
   benchmark <- 1
 
   # test
-  test_that('TEST: draw_sigam2_IMPprior - dimensionality', {
+  test_that('TEST: sigam2 IMPprior - dimensionality', {
     expect_equal(tocheck, benchmark)
   })
 
-Test: draw_PsiInv_HW ####
+# Test: draw_PsiInv_HW ####
 
-  outDummy <- draw_PsiInv_HW(PsiInv,avec,bMat)
+  outDummy <- draw_PsiInv_HW(PsiInv,avec,bMat,n)
     PsiInv_test <- outDummy[[1]]
     avec_test   <- outDummy[[2]]
 
@@ -85,6 +92,32 @@ Test: draw_PsiInv_HW ####
   benchmark <- c(2, 2)
 
   # test
-  test_that('TEST: draw_PsiInv_HW - dimensionality', {
+  test_that('TEST: PsiInv HW - dimensionality', {
+    expect_equal(tocheck, benchmark)
+  })
+  
+# Test: draw_PsiInv_InvWish ####
+
+  PsiInv_test <- draw_PsiInv_InvWish(n,bMat,S0=diag(2))
+
+  tocheck   <- dim(PsiInv_test)
+  benchmark <- c(2, 2)
+
+  # test
+  test_that('TEST: PsiInv InvWish - dimensionality', {
+    expect_equal(tocheck, benchmark)
+  })
+
+# Test: draw_PsiInv_matF ####
+
+  outDummy <- draw_PsiInv_matF(yvec,Xmat,Zi,bMat,PsiInv,Omega,B0Inv,n)
+    PsiInv_test <- outDummy[[1]]
+    omega_test  <- outDummy[[2]]
+
+  tocheck   <- dim(PsiInv_test)
+  benchmark <- c(2, 2)
+
+  # test
+  test_that('TEST: PsiInv matF - dimensionality', {
     expect_equal(tocheck, benchmark)
   })
