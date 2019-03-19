@@ -89,7 +89,7 @@ draw_PsiInv_HW = function(PsiInv,avec,bMat,n){
                                                # result is m + 3
                      S = solve(ScaleMatrix))
   
-  scale_avec = 2*diag(PsiInvDraw) + 1/Ak**2    # a_k scale parameter in Haung Wnad 2013 (section 4 full conditionals)
+  scale_avec = 2*diag(PsiInvDraw) + 1/Ak**2    # a_k scale parameter in Haung Wand 2013 (section 4 full conditionals)
   avec = rinvgamma(2,                          # q = 2: 1 random intercept, 1 random slope
                    shape = 2,                  # (nu + q) /2, where q = 2, nu = 2
                    scale = scale_avec)

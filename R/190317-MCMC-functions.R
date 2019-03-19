@@ -23,6 +23,13 @@
 #   n        <- nrow(RiesbyDat)/J
 #   Zi       <- cbind(rep(1, length = J), unique(Xmat[, 2]))
 # 
+#   # Make it digestable for the functions (from model fitting input)
+#   yvec     <- dat_yvec
+#   Xmat     <- dat_Xmat
+#   J        <- dat_J
+#   n        <- dat_n
+#   Zi       <- dat_Zi
+# 
 # # Test Functions
 #   out1 <- MCMC_HWprior(yvec = RiesbyDat$depr,
 #                        Xmat = cbind(rep(1, nrow(RiesbyDat)), RiesbyDat$week, RiesbyDat$endog, RiesbyDat$week*RiesbyDat$endog),
