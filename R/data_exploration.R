@@ -18,7 +18,7 @@
 # NIMH Schizophrenia ####
   # Used by Hedeker Gibbons 2006, Longitudinal Data Analysis
   # Ordinal Outcome, dichotomized
-  schizdata <- as.data.frame(read.table("./Data/SCHIZX1.DAT.txt")[-c(3060),])
+  schizdata <- as.data.frame(read.table("./data/SCHIZX1.DAT.txt")[-c(3060),])
   colnames(schizdata) <- c("id", "SevIll", ".", ".", ".", "drug", "week")
   
   # Study Dataset
@@ -104,11 +104,11 @@
   unique(schizdata.noNA$id)
   
   #Dichotomize y
-  schizdata.noNA$SevIll[which(schizdata.noNA$SevIll < 4)] <- 0
-  schizdata.noNA$SevIll[which(schizdata.noNA$SevIll >= 4)] <- 1
+  # schizdata.noNA$SevIll[which(schizdata.noNA$SevIll < 4)] <- 0
+  # schizdata.noNA$SevIll[which(schizdata.noNA$SevIll >= 4)] <- 1
   
   schizdata.noNA <- schizdata.noNA[, c(1:4)]
-  
+  schizdata.noNA$inter <- schizdata.noNA$week*schizdata.noNA$drug
   # For 8 and 3 cases you need special attention:
   # If by random choice all elements in the covariate are the same, then
   # You can't go on. Therefore we select specific cases instaed of oging at random
@@ -116,6 +116,9 @@
   
   schizdata.noNA[order(schizdata.noNA$drug, decreasing = TRUE), ]
   nrow(schizdata.noNA)/4
+  head(schizdata.noNA)
+  write.table(schizdata.noNA, "./data/schizdata_noNA.txt")
+  read.table("./data/schizdata_noNA.txt")
   
 # Riesby data (depression scale) ####
   # Used by Hedeker Gibbons 2006, Longitudinal Data Analysis (p.68)
@@ -134,8 +137,8 @@
   
 # Poling data ####
   # Used by Gelman et al 2014 (p.437, section 16.5)
-  polls <- as.data.frame(read_dta(file = "./Data/polls.dta"))
-  census88 <- as.data.frame(read_dta(file = "./Data/census88.dta"))
+  polls <- as.data.frame(read_dta(file = "./data/polls.dta"))
+  census88 <- as.data.frame(read_dta(file = "./data/census88.dta"))
   
   head(polls)
   head(census88)
@@ -147,7 +150,7 @@
   thaidat <- read.table("./Data/UTHAI1.dat")[,1:5] #long format
   colnames(thaidat) <- c("schid", "male", "pped", "rep1", "msesc") # pped = preschool pupil education)
   summary(thaidat)
-  head(thaidat)
+  head(thaidat) 
   unique(thaidat$msesc)
 
   nj <- NULL

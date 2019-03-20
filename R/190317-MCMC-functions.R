@@ -109,7 +109,9 @@
         PD_theta  = matrix(0, nrow = samsize, ncol = ncol(Xmat))
         PD_bMat   = matrix(0, nrow = samsize, ncol = n*2)
         PD_Psi    = matrix(0, nrow = samsize, ncol = ncol(Zi)*2) # store RI, RS var and cov
+          colnames(PD_Psi) <- c("RI_var", "cov", "cov", "RS_var")
         PD_Psi_sd = matrix(0, nrow = samsize, ncol = ncol(Zi)*2) # store RI, RS sd and corr
+          colnames(PD_Psi_sd) <- c("RI_sd", "cor", "cor", "RS_sd")
         PD_avec   = matrix(0, nrow = samsize, ncol = 2)
         
         #burn-in
@@ -149,11 +151,13 @@
             corRIRS <- PD_Psi[ss,2]/(sdRI*sdRS) # save the correlation
           PD_Psi_sd[ss,] = c(sdRI, corRIRS, corRIRS, sdRS)
         }
-        return(list(PD_theta,  #1
+        out <- list(PD_theta,  #1
                     PD_bMat,   #2
                     PD_Psi,    #3
                     PD_Psi_sd, #4
-                    PD_avec))  #5
+                    PD_avec)
+        names(out) <- c("PD_theta", "PD_bMat", "PD_Psi", "PD_Psi_sd", "PD_avec")
+        return(out)
     }
     
 # Model fitting with inv-Wish standard prior
@@ -187,7 +191,9 @@
         PD_theta  = matrix(0, nrow = samsize, ncol = ncol(Xmat))
         PD_bMat   = matrix(0, nrow = samsize, ncol = n*2)
         PD_Psi    = matrix(0, nrow = samsize, ncol = ncol(Zi)*2) # store RI, RS var and cov
+          colnames(PD_Psi) <- c("RI_var", "cov", "cov", "RS_var")
         PD_Psi_sd = matrix(0, nrow = samsize, ncol = ncol(Zi)*2) # store RI, RS sd and corr
+          colnames(PD_Psi_sd) <- c("RI_sd", "cor", "cor", "RS_sd")
 
         #burn-in
         for(ss in 1:(samsize*burnin)){
@@ -219,10 +225,13 @@
             corRIRS <- PD_Psi[ss,2]/(sdRI*sdRS) # save the correlation
           PD_Psi_sd[ss,] = c(sdRI, corRIRS, corRIRS, sdRS)
         }
-        return(list(PD_theta,  #1
+        
+        out <- list(PD_theta,  #1
                     PD_bMat,   #2
                     PD_Psi,    #3
-                    PD_Psi_sd))#4
+                    PD_Psi_sd) #4
+        names(out) <- c("PD_theta", "PD_bMat", "PD_Psi", "PD_Psi_sd")
+        return(out)
     }
     
 # Model fitting with inv-Wish standard prior
@@ -258,7 +267,9 @@
         PD_bMat   = matrix(0, nrow = samsize, ncol = n*2)
         PD_Omg    = matrix(0, nrow = samsize, ncol = ncol(Zi)*2)
         PD_Psi    = matrix(0, nrow = samsize, ncol = ncol(Zi)*2) # store RI, RS var and cov
+          colnames(PD_Psi) <- c("RI_var", "cov", "cov", "RS_var")
         PD_Psi_sd = matrix(0, nrow = samsize, ncol = ncol(Zi)*2) # store RI, RS sd and corr
+          colnames(PD_Psi_sd) <- c("RI_sd", "cor", "cor", "RS_sd")
 
         #burn-in
         for(ss in 1:(samsize*burnin)){
@@ -295,10 +306,12 @@
             corRIRS <- PD_Psi[ss,2]/(sdRI*sdRS) # save the correlation
           PD_Psi_sd[ss,] = c(sdRI, corRIRS, corRIRS, sdRS)
         }
-        return(list(PD_theta,  #1
+        out <- list(PD_theta,  #1
                     PD_bMat,   #2
                     PD_Psi,    #3
                     PD_Psi_sd, #4
-                    PD_Omg))   #5 
+                    PD_Omg)   #5
+        names(out) <- c("PD_theta", "PD_bMat", "PD_Psi", "PD_Psi_sd", "PD_Omg")
+        return(out)
     }
     

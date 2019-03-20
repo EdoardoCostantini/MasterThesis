@@ -13,62 +13,94 @@
   source("./R/190317-MCMC-functions.R")
   source("./R/190318-priorplot-functions.R")
 
-# Load some data
+# Load data
+  # Riesbt dat
   RiesbyDat <- read.table("./data/RiesbyDat.txt")
   dat_ALL <- data.frame(cluster = RiesbyDat$id,    #constant dataset w/ naming that fits the loop
                         yvec    = RiesbyDat$depr,  #you only need to change the variables included here
                         xvec    = RiesbyDat$week,  #and everything will be adapted in the loop
                         cvec    = RiesbyDat$endog,
                         inter   = RiesbyDat$inter)
+  dat_Zi   <- cbind(rep(1, length = length(unique(dat_ALL$xvec))), unique(dat_ALL$xvec))
+  dat_ALLn <- nrow(dat_ALL)/length(unique(dat_ALL$xvec)) # need it for conditons definition
+  
+  # Schiz dat
+  schizdata <- read.table("./data/schizdata_noNA.txt")
+    head(schizdata)
+  dat_ALL <- data.frame(cluster = schizdata$id,     #constant dataset w/ naming that fits the loop
+                        yvec    = schizdata$SevIll, #you only need to change the variables included here
+                        xvec    = schizdata$week,   #and everything will be adapted in the loop
+                        cvec    = schizdata$drug,
+                        inter   = schizdata$inter)
+  dat_Zi   <- cbind(rep(1, length = length(unique(dat_ALL$xvec))), unique(dat_ALL$xvec))
+  dat_ALLn <- nrow(dat_ALL)/length(unique(dat_ALL$xvec)) # need it for conditons definition
   
 # Define psi priors
   B0_pn  <- 1e3*diag(2) # mat-f proper neighbour guess
   B0_iW  <- 1e3*diag(2) # guess of inverse Wishart prior that should ressamble the IG(e,e) from Gelman
-  # Rstart <- solve(t(dat_Zi)%*%dat_Zi) this will be defined in the loop because it depedns on Zi
+  Rstar <- solve(t(dat_Zi)%*%dat_Zi) #this will be defined in the loop because it depedns on Zi
   
   # Educated Guess
-    #   intercept <- rep(NA, dat_n)
-    #   slope     <- rep(NA, dat_n)
-    #   i <- 1
-    #   for (id in 1:dat_n) {
-    #     #print(paste("Before:", i))
-    #     fit <- lm(dat_yvec[i:(i+5)] ~ scale(dat_Xmat[i:(i+5), 2]))
-    #     intercept[[id]] <- coef(fit)[1]
-    #     slope[[id]]     <- coef(fit)[2]
-    #     
-    #     i <- i+6
-    #     #print(paste("After:", i))
-    #   }
-    #   vi <- var(intercept) # 20 # these guesses are based on the entire sample
-    #   vs <- var(slope)     # 9
+      # intercept <- rep(NA, dat_ALLn)
+      # slope     <- rep(NA, dat_ALLn)
+      # i <- 1
+      # for (id in 1:dat_ALLn) {
+      #   #print(paste("Before:", i))
+      #   fit <- lm(dat_ALL$yvec[i:(i+5)] ~ scale(dat_ALL$xvec[i:(i+5)]))
+      #   intercept[[id]] <- coef(fit)[1]
+      #   slope[[id]]     <- coef(fit)[2]
+      # 
+      #   i <- i+6
+      #   #print(paste("After:", i))
+      # }
+      # vi <- var(intercept) # 20 # these guesses are based on the entire sample
+      # vs <- var(slope)     # 9
     vi <- 20
     vs <- 9
   B0_ed  <- matrix(c(vi, 0, 0, vs), ncol = 2) # guess based on data exploration and knowledge
   
-  conds <- c("ALL", "30", "20", "8", "6") # How many clusters to consider
+  set.seed(20190308)
+  
+  conds <- c(dat_ALLn, 30, 20, 8, 4) # How many clusters to consider
+  clusters4cond  <- list(unique(dat_ALL$cluster),
+                         sample(unique(dat_ALL$cluster), conds[2]),
+                         sample(unique(dat_ALL$cluster), conds[3]),
+                         c(101, 117, 505, 302, 335, 338, 350, 353),
+                         c(504, 319, 328, 337))
+  
   out1 <- out2 <- out3 <- out4 <- out5 <- vector("list", length = length(conds))
   names(out1) <- names(out2) <- names(out3) <- names(out4) <- names(out5) <- conds
   # Outputs details:
     # Store order: HW, IW, mat-F w/ prior neighbor, mat-f w/ educated guess, mat-f w/ R*
     # each out* will have as many sub lists are there are conditions (length(conds))
   
-  set.seed(20190308)
-  
 # MCMC specs
   MCMC_reps   <- 2000
   MCMC_burnin <- 1/10
+  
+# Fit model ---------------------------------------------------------------
   
 go <- Sys.time()
 
 for (outps in 1:length(conds)) {
   # Reduce number of clusters
-  if(conds[outps] != "ALL"){
-    n_goal        <- as.numeric(conds[outps])                       # how many clusters do you want to work with?
-    clusters_goal <- sample(unique(dat_ALL$cluster), n_goal)        # sample that many from full dataset.
-    dat           <- dat_ALL[dat_ALL$cluster %in% clusters_goal, ]  
-  } else {
-    dat           <- dat_ALL                                        # First condtion uses all
-  }
+  #outps <- 5
+  # if(conds[outps] != "ALL"){
+  #   if(conds[outps] == "8"){
+  #     dat           <- dat_ALL[dat_ALL$cluster %in% c(101, 117, 505, 302, 335, 338, 350, 353), ]  
+  #   }
+  #   if(conds[outps] == "4"){
+  #     dat           <- dat_ALL[dat_ALL$cluster %in% c(504, 319, 328, 337), ]
+  #   } else {
+  #     n_goal        <- as.numeric(conds[outps])                       # how many clusters do you want to work with?
+  #     clusters_goal <- sample(unique(dat_ALL$cluster), n_goal)        # sample that many from full dataset.
+  #     dat           <- dat_ALL[dat_ALL$cluster %in% clusters_goal, ]  
+  #   }
+  # } else {
+  #   dat           <- dat_ALL                                        # First condtion uses all
+  # }
+  clusters_goal <- clusters4cond[[outps]]
+  dat           <- dat_ALL[dat_ALL$cluster %in% clusters_goal, ]  
   
   # Define Data for function
   dat_yvec     <- dat$yvec
@@ -79,7 +111,7 @@ for (outps in 1:length(conds)) {
   dat_subjects <- dat$cluster
   
   # Define prior (only prior element that needs dat_* elements, so in loop)
-  Rstar <- solve(t(dat_Zi)%*%dat_Zi)
+  #Rstar <- solve(t(dat_Zi)%*%dat_Zi)
   
   # Perform MCMC
   print(paste0("n = ", conds[outps],"; prior 1: Huang and Wand Prior") )
@@ -121,48 +153,52 @@ for (outps in 1:length(conds)) {
 stop <- Sys.time()
 timetaken <- stop - go
 
-# Save Results of analysis
-  output <- list(out1, out2, out3, out4, out5)
-  names(output) <- c("prior_HW", "prior_IW", "prior_MFPN", "prior_MFEG", "prior_MFR*")
-  outname <- paste0("./output/", "output", "_rep", MCMC_reps, ".rds")
-  
+# Save Results of analysis ------------------------------------------------
+
+  pg <- data.frame(vi_pg = c(10**5, B0_iW[1, 1], B0_pn[1, 1], B0_ed[1, 1], Rstar[1, 1]), # list of prior gruesses used
+                   vs_pg = c(10**5, B0_iW[2, 2], B0_pn[2, 2], B0_ed[2, 2], Rstar[2, 2]))
+  row.names(pg) <- c("prior_HW", "prior_IW", "prior_MFPN", "prior_MFEG", "prior_MFR*")
+  output <- list(out1, out2, out3, out4, out5, pg)
+  names(output) <- c("prior_HW", "prior_IW", "prior_MFPN", "prior_MFEG", "prior_MFR*", "prior_guesses")
+
   comment(output) <- paste("time:", round(as.numeric(timetaken), 2), "mins")
-  str(output)
+  ls(output)
   
-  saveRDS(output, paste0("./output/", "riesbydata", "_rep", MCMC_reps, ".rds"))
-  # loadedresults <- readRDS("./output/riesbydata_rep10000.rds")
+  saveRDS(output, paste0("./output/", "riesbydata","-cond_", paste(conds,collapse="_"), "-rep_", MCMC_reps, ".rds"))
+  output <- readRDS("./output/riesbydata_rep10000.rds")
   
-# Results Exploration
+# Results Exploration -----------------------------------------------------
+  fit   <- lmer(yvec ~ xvec + cvec + inter + (1 + xvec | cluster), REML = FALSE, data = dat_ALL)
   # Output selection
-  which_pri <- 4 # which prior
+  which_pri <- 1 # which prior
   which_con <- 1 # which condition
   which_par <- 4 # which object (which parameters type)
   which_col <- 1 # which column in object (which parameter)
   
-  output[[which_pri]][[which_con]][[which_par]][,which_col] #out$prior_HW$ALL[[which_par]][,which_col]
+  #output[[which_pri]][[which_con]][[which_par]][,which_col] #out$prior_HW$ALL[[which_par]][,which_col]
   
   # Traceplot
     plot(1:MCMC_reps, output[[which_pri]][[which_con]][[which_par]][,which_col],"l")
   # Estimates
     mean(output[[which_pri]][[which_con]][[which_par]][,which_col])
     median(output[[which_pri]][[which_con]][[which_par]][,which_col])
-    # Compare with lme results
-    fit
-  # Posteriors
-    # Histograms
-    hist(output[[which_pri]][[which_con]][[which_par]][,which_col], breaks = 100,
-         xlab = "Intercept Variance")
-    abline(v = mean(output[[which_pri]][[which_con]][[which_par]][,which_col]), col = "blue", lwd = 2)
-    abline(v = median(output[[which_pri]][[which_con]][[which_par]][,which_col]), col = "red", lwd = 2)
-    
+  #   # Compare with lme results
+  #   fit
+  # # Posteriors
+  #   # Histograms
+  #   hist(output[[which_pri]][[which_con]][[which_par]][,which_col], breaks = 100,
+  #        xlab = "Intercept Variance")
+  #   abline(v = mean(output[[which_pri]][[which_con]][[which_par]][,which_col]), col = "blue", lwd = 2)
+  #   abline(v = median(output[[which_pri]][[which_con]][[which_par]][,which_col]), col = "red", lwd = 2)
+  #   
     # Density
-    varseq <- seq(0, 100, length = 1000)
+    varseq <- seq(0, 10000, length = 1000)
     vi_priorG <- c(NA, B0_iW[1, 1], B0_pn[1, 1], B0_ed[1, 1], Rstar[1, 1])
     sdseq <- sqrt(varseq)
-    
-    plot(density(output[[which_pri]][[which_con]][[which_par]][,which_col]), xlim = c(0, 10), ylim=c(0, 1))
+
+    plot(density(output[[which_pri]][[which_con]][[which_par]][,which_col]), xlim = c(0, 100), ylim=c(0, 1))
     # Plot prior for variance
-      lines(varseq, df_freeb(varseq, nu = 2, d = 1, b = vi_priorG[which_pri]), type = "l", lty = 2)
+      #lines(varseq, df_freeb(varseq, nu = 2, d = 1, b = vi_priorG[which_pri]), type = "l", lty = 2)
     # Plot prior for sd
       lines(sdseq, df_freeb_SD(sdseq, nu = 2, d = 1, b = sqrt(vi_priorG[which_pri])), type = "l", lty = 2)
     
@@ -187,54 +223,54 @@ timetaken <- stop - go
   
   
 # SCRAPS ------------------------------------------------------------------
-  
-  output <- vector("list", 5)
-  output[[1]] <- MCMC_HWprior(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
-                       iniv = 1
-                       )
-  output[[2]] <- MCMC_invWish(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
-                       iniv = 1,
-                       B0   = B0_iW
-                       )
-  output[[3]] <- MCMC_matF(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
-                    iniv = 1,
-                    B0   = B0_pn
-                    )
-  output[[4]] <- MCMC_matF(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
-                    iniv = 1,
-                    B0   = B0_ed # B_edug is the informed guess
-                    )
-  output[[5]] <- MCMC_matF(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
-                    iniv = 1,
-                    B0   = Rstar # Rstar is the emprical guess
-                    )
-# Results Exploration
-  # Output selection
-  which_r <- 4 # which result (which prior)
-  which_p <- 3 # which object (which parameters type)
-  which_c <- 1 # which column in object (which parameter)
-  # Traceplot
-    plot(1:MCMC_reps, output[[which_r]][[which_p]][,which_c],"l")
-  # Estimates
-    mean(output[[which_r]][[which_p]][,which_c])
-    median(output[[which_r]][[which_p]][,which_c])
-    # Compare with lme results
-    fit
-  # Posteriors
-    # Histograms
-    hist(output[[which_r]][[which_p]][,which_c], breaks = 100,
-         xlab = "Intercept Variance")
-    abline(v = mean(output[[which_r]][[which_p]][,which_c]), col = "blue", lwd = 2)
-    abline(v = median(output[[which_r]][[which_p]][,which_c]), col = "red", lwd = 2)
-    
-    # Density
-    plot(density(output[[which_r]][[which_p]][,which_c]), xlim = c(0, max(output[[which_r]][[which_p]][,which_c])+1))
-    varseq <- seq(0, 100, length = 1000)
-    sdseq <- sqrt(varseq)
-    # Plot prior for variance
-      lines(varseq, df_freeb(varseq, nu = 2, d = 1, b = vi), type = "l")
-    # Plot prior for sd
-      lines(sdseq, df_freeb_SD(sdseq, nu = 2, d = 1, b = sqrt(vs)), type = "l", lty = 2)
-    
-    plot(density(output[[which_r]][[which_p]][,which_c]), xlim = c(0, 10))
-    
+#   
+#   output <- vector("list", 5)
+#   output[[1]] <- MCMC_HWprior(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
+#                        iniv = 1
+#                        )
+#   output[[2]] <- MCMC_invWish(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
+#                        iniv = 1,
+#                        B0   = B0_iW
+#                        )
+#   output[[3]] <- MCMC_matF(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
+#                     iniv = 1,
+#                     B0   = B0_pn
+#                     )
+#   output[[4]] <- MCMC_matF(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
+#                     iniv = 1,
+#                     B0   = B0_ed # B_edug is the informed guess
+#                     )
+#   output[[5]] <- MCMC_matF(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
+#                     iniv = 1,
+#                     B0   = Rstar # Rstar is the emprical guess
+#                     )
+# # Results Exploration
+#   # Output selection
+#   which_r <- 4 # which result (which prior)
+#   which_p <- 3 # which object (which parameters type)
+#   which_c <- 1 # which column in object (which parameter)
+#   # Traceplot
+#     plot(1:MCMC_reps, output[[which_r]][[which_p]][,which_c],"l")
+#   # Estimates
+#     mean(output[[which_r]][[which_p]][,which_c])
+#     median(output[[which_r]][[which_p]][,which_c])
+#     # Compare with lme results
+#     fit
+#   # Posteriors
+#     # Histograms
+#     hist(output[[which_r]][[which_p]][,which_c], breaks = 100,
+#          xlab = "Intercept Variance")
+#     abline(v = mean(output[[which_r]][[which_p]][,which_c]), col = "blue", lwd = 2)
+#     abline(v = median(output[[which_r]][[which_p]][,which_c]), col = "red", lwd = 2)
+#     
+#     # Density
+#     plot(density(output[[which_r]][[which_p]][,which_c]), xlim = c(0, max(output[[which_r]][[which_p]][,which_c])+1))
+#     varseq <- seq(0, 100, length = 1000)
+#     sdseq <- sqrt(varseq)
+#     # Plot prior for variance
+#       lines(varseq, df_freeb(varseq, nu = 2, d = 1, b = vi), type = "l")
+#     # Plot prior for sd
+#       lines(sdseq, df_freeb_SD(sdseq, nu = 2, d = 1, b = sqrt(vs)), type = "l", lty = 2)
+#     
+#     plot(density(output[[which_r]][[which_p]][,which_c]), xlim = c(0, 10))
+#     
