@@ -92,7 +92,7 @@
         if (iniv == 1){
           fit   <- lmer(yvec ~ xvec + covar + inter + (1 + xvec | cluster), REML = FALSE)
           #theta  <- fixef(fit)
-          Psi    <- matrix(VarCorr(fit)[[1]][1:4], ncol = 2)
+          Psi    <- matrix(VarCorr(fit)[[1]][1:4], ncol = 2)# + .01*diag(2)# as in MulderPericchi2018 code
           PsiInv <- solve(Psi)        # var-covar matrix of random effects estimated with glmer
           sigma2 <- attr(VarCorr(fit), "sc")
           bMat   <- as.matrix(ranef(fit)$cluster)

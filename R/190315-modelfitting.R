@@ -24,20 +24,21 @@
   dat_Zi   <- cbind(rep(1, length = length(unique(dat_ALL$xvec))), unique(dat_ALL$xvec))
   dat_ALLn <- nrow(dat_ALL)/length(unique(dat_ALL$xvec)) # need it for conditons definition
   
-  # Schiz dat
-  schizdata <- read.table("./data/schizdata_noNA.txt")
-    head(schizdata)
-  dat_ALL <- data.frame(cluster = schizdata$id,     #constant dataset w/ naming that fits the loop
-                        yvec    = schizdata$SevIll, #you only need to change the variables included here
-                        xvec    = schizdata$week,   #and everything will be adapted in the loop
-                        cvec    = schizdata$drug,
-                        inter   = schizdata$inter)
-  dat_Zi   <- cbind(rep(1, length = length(unique(dat_ALL$xvec))), unique(dat_ALL$xvec))
-  dat_ALLn <- nrow(dat_ALL)/length(unique(dat_ALL$xvec)) # need it for conditons definition
+  # # Schiz dat
+  # schizdata <- read.table("./data/schizdata_noNA.txt")
+  #   head(schizdata)
+  # dat_ALL <- data.frame(cluster = schizdata$id,     #constant dataset w/ naming that fits the loop
+  #                       yvec    = schizdata$SevIll, #you only need to change the variables included here
+  #                       xvec    = schizdata$week,   #and everything will be adapted in the loop
+  #                       cvec    = schizdata$drug,
+  #                       inter   = schizdata$inter)
+  # dat_Zi   <- cbind(rep(1, length = length(unique(dat_ALL$xvec))), unique(dat_ALL$xvec))
+  # dat_ALLn <- nrow(dat_ALL)/length(unique(dat_ALL$xvec)) # need it for conditons definition
   
 # Define psi priors
   B0_pn  <- 1e3*diag(2) # mat-f proper neighbour guess
-  B0_iW  <- 1e3*diag(2) # guess of inverse Wishart prior that should ressamble the IG(e,e) from Gelman
+  B0_iW  <- diag(2)     # guess of inverse Wishart prior that should ressamble the IG(e,e) from Gelman
+                        # for now follow Gelman 2014 (p.73) indication of non-informative choice
   Rstar <- solve(t(dat_Zi)%*%dat_Zi) #this will be defined in the loop because it depedns on Zi
   
   # Educated Guess
@@ -75,7 +76,7 @@
     # each out* will have as many sub lists are there are conditions (length(conds))
   
 # MCMC specs
-  MCMC_reps   <- 2000
+  MCMC_reps   <- 1e4
   MCMC_burnin <- 1/10
   
 # Fit model ---------------------------------------------------------------
@@ -87,14 +88,14 @@ for (outps in 1:length(conds)) {
   #outps <- 5
   # if(conds[outps] != "ALL"){
   #   if(conds[outps] == "8"){
-  #     dat           <- dat_ALL[dat_ALL$cluster %in% c(101, 117, 505, 302, 335, 338, 350, 353), ]  
+  #     dat           <- dat_ALL[dat_ALL$cluster %in% c(101, 117, 505, 302, 335, 338, 350, 353), ]
   #   }
   #   if(conds[outps] == "4"){
   #     dat           <- dat_ALL[dat_ALL$cluster %in% c(504, 319, 328, 337), ]
   #   } else {
   #     n_goal        <- as.numeric(conds[outps])                       # how many clusters do you want to work with?
   #     clusters_goal <- sample(unique(dat_ALL$cluster), n_goal)        # sample that many from full dataset.
-  #     dat           <- dat_ALL[dat_ALL$cluster %in% clusters_goal, ]  
+  #     dat           <- dat_ALL[dat_ALL$cluster %in% clusters_goal, ]
   #   }
   # } else {
   #   dat           <- dat_ALL                                        # First condtion uses all
@@ -164,7 +165,7 @@ timetaken <- stop - go
   comment(output) <- paste("time:", round(as.numeric(timetaken), 2), "mins")
   ls(output)
   
-  saveRDS(output, paste0("./output/", "riesbydata","-cond_", paste(conds,collapse="_"), "-rep_", MCMC_reps, ".rds"))
+  saveRDS(output, paste0("./output/", "riesbydata","-cond_", paste(conds,collapse="_"), "-rep_", MCMC_reps,"v2", ".rds"))
   output <- readRDS("./output/riesbydata_rep10000.rds")
   
 # Results Exploration -----------------------------------------------------

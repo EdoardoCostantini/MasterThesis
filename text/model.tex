@@ -4,6 +4,8 @@
 
 % Packages
 \usepackage{bm} % for math bold
+\usepackage{amsmath} % for the allignment of equations under same number
+\usepackage{amsmath}					 % matrix
 
 \begin{document}
 Here I define the Bayesian model I want to use to test the performance of the different priors. The features I want to include are the folowing: continuous outcome, any number/measurement scale.
@@ -20,12 +22,10 @@ $ \epsilon_{ij} \sim N(0, \sigma^2) $
 
 \vspace{5mm}
 
-(Vectors are in bold, amtrix are capital greek letters).\\
+(Vectors are in bold, matrix are capital Greek letters).\\
 I'm going to define the following \textbf{priors}:
 
 \vspace{5mm}
-
-
 
 \begin{equation}
 p(\bm{\theta}) \propto 1
@@ -35,9 +35,40 @@ p(\bm{\theta}) \propto 1
 p(\sigma^2) \propto \sigma^{-2}
 \end{equation}
 
+For what concerns the random effects variance covariance matrix, different priors are tested. In particular we used:
+
+\begin{itemize}
+	\item inverse-Wishart
+	
 \begin{equation}
-p(\bm{\Psi}) \propto [...]
+p(\bm{\Psi}) \propto IW(\nu_0, S_{0})
+\end{equation}	
+
+where we choose $\nu_0$ to be 1 and $S_{0}$ to be diag(2), following indications by Gelman \textit{et al} (2014).
+
+	\item inverse-Wishart \textit{a là} Huang and Wand
+
+\begin{equation}
+	\begin{split}
+	p(\bm{\Psi|a_1, a_2})& \propto IW(\nu_0 + p - 1, 2\nu_0 diag(1/a_1, 1/a_2)), \\
+	a_k& \propto IG(1/2,1/A_k^2),
+	\end{split}
 \end{equation}
+
+with $\nu_0 = 2$ and $\bm{A} = [100, 100]$. Considering a $2 \times 2$ random effects variance covariance matrix (random intercepts, and random slopes) that has this prior distribution, the corresponding marginal distributions of the standard deviation random components have an half-Cauchy distribution (belonging to the half-\textit{t} family, see Gelman (2006) for details). In particular, any square-root diagonal element $\sigma_k$ of a matrix following such a distribution is Half-\textit{t}$(\nu_0, A_k)$. When, $\nu = 1$, and $A_k$ is equal to the prior guess we have an half-Cauchy prior distribution for a $\sigma_k$ parameter. Furthermore, the marginal priors for the correlations have a beta distribution with parameters $\alpha = -1, \beta = -1$ (Huang and Wand, 2013).
+	
+	\item Matrix-F variate
+	
+\begin{equation}
+\begin{split}
+p(\bm{\Psi})& \propto F(\bm{\Psi}; \nu_0, \delta, \bm{B}) \\
+& \propto \int IW(\bm{\Psi}; \delta + k - 1, \Sigma) \times W(\bm{\Sigma}; \nu_0, \bm{B})d\bm{\Sigma}
+\end{split}
+\end{equation}	
+\end{itemize}
+
+where $\nu_0 = 2$, $\delta = 1$, and $\bm{B}$ is a prior guess. Three different choices where made for $\bm{B}$ in this paper: diag($10^3$), proper neighbor of $(\sigma^2)^{-\frac{1}{2}}$; $\bm{B}_{ed}$, an educated guess based on data exploration, $\bm{R^*}$ and an empirical bayes choice following Kass and Natarajan (2006). \\
+Considering a $2 \times 2$ random effects variance covariance matrix (random intercepts, and random slopes) that is matrix-F distirbuted, $F(\nu_0, \delta, \bm{B})$, the marginal distribution on the standard deviations of the random effects are univariate $F(\nu_0, \delta, b_{11})$ and $F(\nu_0, \delta, b_{22})$, with $\nu_0 >1, \delta > 0, b_{jj} > 0$.
 
 \vspace{5mm}
 
@@ -165,6 +196,29 @@ The prior for $\sigma$ is given above, and therefore we can write the full condi
 
 
 \paragraph{Full conditional for $\bm{\Psi}$}(random effects variance covariance matrix)\\
+
+Here, we need to write down the posteriors for the different priors we specified. First, let us define the sampling model for the random effects.
+
+$M = \begin{smallmatrix} a&b\\ c&d \end{smallmatrix}$
+
+\begin{equation}
+\begin{split}
+\begin{bmatrix} 
+  b_{0i}\\ 
+  b_{1i}
+\end{bmatrix} 
+= \bm{b}_{i}& \sim N(\bm{0}, \bm{\Psi}) \\
+p(\bm{b}_{1}, \bm{b}_{2}| \bm{\Psi})& \propto |\bm{\Psi}|^{-\frac{n}{2}}
+\end{split}
+\end{equation}
+
+\begin{itemize}
+	\item inverse-Wishart
+	
+	\item inverse-Wishart \textit{a là} Huang and Wand
+	
+	\item Matrix-F variate
+\end{itemize}
 
 See Mulder Pericchi, 2018
 

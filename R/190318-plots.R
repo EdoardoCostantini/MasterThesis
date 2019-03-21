@@ -3,16 +3,18 @@
 ### Description: Contains the functions and calls for the plots
 ### Date:        2019-03-20
 
+# Set up
+#library(MCMCpack)
 source("./R/190318-priorplot-functions.R")
 
 # Load Results
-
-# Riesbydata (depresion)
-  #output <- readRDS("./output/riesbydata_rep10000.rds")
-  output <- readRDS("./output/riesbydata-cond_46_30_20_8_4-rep_10000.rds")[-6]
-    str(output)
-  pg <- readRDS("./output/riesbydata-cond_46_30_20_8_4-rep_10000.rds")[[6]] #last object contains the priors
-  MCMC_reps <- 10000 # info in the file name
+  
+  # Riesbydata (depresion)
+    #output <- readRDS("./output/riesbydata_rep10000.rds")
+    output <- readRDS("./output/riesbydata-cond_46_30_20_8_4-rep_10000v2.rds")[-6]
+      str(output)
+    pg <- readRDS("./output/riesbydata-cond_46_30_20_8_4-rep_10000v2.rds")[[6]] #last object contains the priors
+    MCMC_reps <- 10000 # info in the file name
 
 # SD posteriors and traceplot ---------------------------------------------
 
@@ -47,7 +49,7 @@ source("./R/190318-priorplot-functions.R")
                           nu = 2,
                           mu = 0,
                           sigma2 = pg[prior, param]), # the prior guess goes here! Arbitrarly large values induce arbitrarly weak priors
-                # see Huang and Wand 2013 p.3 and property 2 p.4
+                                                      # see Huang and Wand 2013 p.3 and property 2 p.4
                 type = "l", col = "Gray")
         }
         if(prior >= 3){
@@ -138,7 +140,10 @@ source("./R/190318-priorplot-functions.R")
   
   
 # Experiments
-  x <- output[[1]][[1]][[4]][,-c(2,3)]
+  which_pri <- 1 # which prior
+  which_con <- 4 # which condition
+  which_par <- 4 # which object (which parameters type)
+  x <- output[[which_pri]][[which_con]][[which_par]][,-c(2,3)]
         param <- 1
         plot(density(x[,param]),
              xlim = c(0, 10), ylim = c(0,2),
@@ -147,9 +152,15 @@ source("./R/190318-priorplot-functions.R")
         # HW prior (on sd)
         lines(sdseq,
               dt_folded(sdseq,
-                        nu = 2,
+                        nu = 1,
                         mu = 0,
-                        sigma2 = 10**5), # the prior guess goes here! Arbitrarly large values induce arbitrarly weak priors
+                        sigma2 = pg[which_pri, param]), # the prior guess goes here! Arbitrarly large values induce arbitrarly weak priors
+              # see Huang and Wand 2013 p.3 and property 2 p.4
+              type = "l", col = "Gray")
+        # IW prior (on sd)
+        lines(sdseq,
+              dinvgamma(sdseq,
+                        shape = 2,
+                        scale = 1), # the prior guess goes here! Arbitrarly large values induce arbitrarly weak priors
                                          # see Huang and Wand 2013 p.3 and property 2 p.4
               type = "l", col = "Gray")
-  
