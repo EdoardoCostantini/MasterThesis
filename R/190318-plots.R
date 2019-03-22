@@ -140,7 +140,7 @@ source("./R/190318-priorplot-functions.R")
   
   
 # Experiments
-  which_pri <- 1 # which prior
+  which_pri <- 3 # which prior
   which_con <- 4 # which condition
   which_par <- 4 # which object (which parameters type)
   x <- output[[which_pri]][[which_con]][[which_par]][,-c(2,3)]
@@ -160,7 +160,13 @@ source("./R/190318-priorplot-functions.R")
         # IW prior (on sd)
         lines(sdseq,
               dinvgamma(sdseq,
-                        shape = 2,
+                        shape = 1,
                         scale = 1), # the prior guess goes here! Arbitrarly large values induce arbitrarly weak priors
                                          # see Huang and Wand 2013 p.3 and property 2 p.4
               type = "l", col = "Gray")
+        # Univaraite F
+        lines(sdseq,
+                df_freeb_SD(sdseq, 
+                            nu = 2, d = 1, 
+                            b = sqrt(pg[which_pri, param])), # the prior guess goes here!
+                type = "l", col = "Gray")
