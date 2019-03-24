@@ -131,7 +131,7 @@
   RiesbyDat <- apply(RiesbyDat, 2, as.numeric)
   RiesbyDat <- as.data.frame(RiesbyDat)
   RiesbyDat <- RiesbyDat[!(RiesbyDat$id %in% RiesbyDat[which(is.na(RiesbyDat$depr)), "id"]) , ]
-  
+  summary(RiesbyDat$depr) # 
   write.table(RiesbyDat, "./data/RiesbyDat.txt")
   read.table("./data/RiesbyDat.txt")
   

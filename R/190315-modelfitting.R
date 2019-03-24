@@ -165,8 +165,8 @@ timetaken <- stop - go
   comment(output) <- paste("time:", round(as.numeric(timetaken), 2), "mins")
   ls(output)
   
-  saveRDS(output, paste0("./output/", "riesbydata","-cond_", paste(conds,collapse="_"), "-rep_", MCMC_reps,"v2", ".rds"))
-  output <- readRDS("./output/riesbydata_rep10000.rds")
+  saveRDS(output, paste0("./output/", "riesbydata","-cond_", paste(conds,collapse="_"), "-rep_", MCMC_reps,"-HWnu0_1", ".rds"))
+  #output <- readRDS("./output/riesbydata_rep10000.rds")
   
 # Results Exploration -----------------------------------------------------
   fit   <- lmer(yvec ~ xvec + cvec + inter + (1 + xvec | cluster), REML = FALSE, data = dat_ALL)

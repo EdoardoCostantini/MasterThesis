@@ -85,8 +85,8 @@ draw_PsiInv_HW = function(PsiInv,avec,bMat,n){
   Ak = 10**5
   ScaleMatrix = t(bMat)%*%bMat +               # sum of ui %*% ui'
                 2*2*diag(1/avec)               # nu = 2
-  PsiInvDraw = rwish(v = n + 3,                # nu + N + q - 1, where: nu = 2, q = 2, n = 30 (number of clusters), 
-                                               # result is m + 3
+  PsiInvDraw = rwish(v = n + 2,                # nu + N + q - 1, where: nu = 2, q = 2, n = 30 (number of clusters), 
+                                               # result is m + 3 (USUALLY n + 3! Now you changed it to see what happens)
                      S = solve(ScaleMatrix))
   
   scale_avec = 2*diag(PsiInvDraw) + 1/Ak**2    # a_k scale parameter in Haung Wand 2013 (section 4 full conditionals)
@@ -101,7 +101,7 @@ draw_PsiInv_HW = function(PsiInv,avec,bMat,n){
   # where S0 is a prior guess for the random effects var-cov matrix
 draw_PsiInv_InvWish = function(n,bMat,S0=diag(2)){
   ScaleMatrix = t(bMat)%*%bMat + S0
-  PsiInvDraw = rwish(v = n + 2,               # nu0 = 2
+  PsiInvDraw = rwish(v = n + 1,               # nu0 = 2 # usually 2, you changed to 1 for reasons specified in the manuscript
                      S = solve(ScaleMatrix))  # distirbution is just Wishart, not inverse! Therefore, the guess priovaded is invterted!
   return(PsiInvDraw)
 }
