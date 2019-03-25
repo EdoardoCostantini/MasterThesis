@@ -13,7 +13,7 @@ source("./R/190318-priorplot-functions.R")
   # Riesbydata (depresion)
     #output <- readRDS("./output/riesbydata_rep10000.rds")
   MCMC_reps <- 10000
-  IW_nu0    <- 1
+  IW_nu0    <- 2
   output_filename <- paste0("./output/riesbydata-cond_46_30_20_8_4-rep_",
                             MCMC_reps,
                             "-IWnu0_",
@@ -38,13 +38,17 @@ source("./R/190318-priorplot-functions.R")
   nprior <- length(output) # how many priors will be considered
   
   sdseq  <- sqrt(seq(0, 3000, length = 100000)) # important to plot the piror
-  IW_prior_draws <- rinvgamma(100000,
-                              shape = IW_nu0/2, # you chose nu0 = 2 in the IW, IG on sd is nu0/2
-                              scale = pg[2, 1]/2)
-  plot(density(IW_prior_draws),
-       xlim = c(0, 100),#, ylim = c(0,2),
-       type = "l", col = "Gray")
   
+  IW_prior_draws <- sqrt(rinvgamma(1e7,
+                              shape = IW_nu0/2, # you chose nu0 = 2 in the IW, IG on sd is nu0/2
+                              scale = pg[2, 1]/2))
+  # plot(density(IW_prior_draws),
+  #      xlim = c(0, 100),#, ylim = c(0,2),
+  #      type = "l", col = "Gray")
+  h <- hist(IW_prior_draws, col = "Gray",
+          prob = TRUE,
+          xlim = c(0, 20), breaks = 1e4)
+        
   par(mfcol = c(npar, nprior))
   
 # > Posterior Distirbutions ####  
@@ -57,24 +61,23 @@ source("./R/190318-priorplot-functions.R")
         x <- output[[prior]][[cond]][[which_par]][,-c(2,3)]
     
         plot(density(x[,param]),
-             xlim = c(0, 10), ylim = c(0,2),
+             xlim = c(0, 20), ylim = c(0,1),
              main = paste(names(output)[prior], "w/", names(output[[prior]])[[cond]], "clusters"),
              xlab = colnames(x)[param])
         # abline(v = mean(x[,param]), col = "blue", lwd = 1)
         # abline(v = median(x[,param]), col = "red", lwd = 1)
         if(prior == 1){
-          lines(sdseq,
-                dt_folded(sdseq,
-                          nu = 2,
-                          mu = 0,
-                          sigma2 = pg[prior, param]), # the prior guess goes here! Arbitrarly large values induce arbitrarly weak priors
-                                                      # see Huang and Wand 2013 p.3 and property 2 p.4
+          lines(sdseq, dt_folded_sigma(sdseq, nu = 2, mu = 0, sigma = 100),
                 type = "l", col = "Gray")
+          # This prior does look like a t disitrbution when zooming in
+          # Since it's very vague (arbitrarly high A_k = 100), we have 
+          # very little density even at the peak
         }
         if(prior == 2){
           # IW prior (on sd)
-          lines(density(IW_prior_draws),
-                type = "l", col = "Gray")
+          lines(h$mids, h$density, type = "l", col = "Gray", xlim = c(0, 20))
+          # lines(density(IW_prior_draws),
+          #       type = "l", col = "Gray")
         }
         if(prior >= 3){
           lines(sdseq,
@@ -194,34 +197,69 @@ source("./R/190318-priorplot-functions.R")
     estimates_corr[[cond]] <- round(store_estiamtes, 3)
   }
   
-# Experiments
+# Experiments ####
   prior <- 2 # which prior
   cond  <- 1 # which condition
   which_par <- 4 # which object (which parameters type)
   x <- output[[prior]][[cond]][[which_par]][,-c(2,3)]
-        param <- 1
-        plot(density(x[,param]),
-             xlim = c(0, 10), ylim = c(0,2),
-             main = paste(names(output)[prior], "w/", names(output[[prior]])[[cond]], "clusters"),
-             xlab = colnames(x)[param])
-        # HW prior (on sd)
-        lines(sdseq,
-              dt_folded(sdseq,
-                        nu = 1,
-                        mu = 0,
-                        sigma2 = pg[which_pri, param]), # the prior guess goes here! Arbitrarly large values induce arbitrarly weak priors
-              # see Huang and Wand 2013 p.3 and property 2 p.4
-              type = "l", col = "Gray")
-        # IW prior (on sd)
-        IW_prior_draws <- rinvgamma(5000,
-                                    shape = 2,
-                                    scale = 1)
-        lines(density(IW_prior_draws),
-              type = "l", col = "Gray")
-        
-        # Univaraite F
-        lines(sdseq,
-                df_freeb_SD(sdseq, 
-                            nu = 2, d = 1, 
-                            b = sqrt(pg[which_pri, param])), # the prior guess goes here!
-                type = "l", col = "Gray")
+  param <- 1
+  plot(density(x[,param]),
+       xlim = c(0, 20), ylim = c(0,2),
+       main = paste(names(output)[prior], "w/", names(output[[prior]])[[cond]], "clusters"),
+       xlab = colnames(x)[param])
+  # HW prior (on sd)
+    plot(sdseq,
+         dt_folded(sdseq,
+                   nu = 1,
+                   mu = 0,
+                   sigma2 = 100), # the prior guess goes here! Arbitrarly large values induce arbitrarly weak priors
+         # see Huang and Wand 2013 p.3 and property 2 p.4
+         type = "l", col = "Gray")
+  # IW prior (on sd)
+    nu0 <- 1.001
+    S0 <- 1.001
+    IW_prior_draws <- sqrt(rinvgamma(1e6,
+                                     shape = nu0/2, # you chose nu0 = 2 in the IW, IG on sd is nu0/2
+                                     scale = S0/2))
+    plot(density(IW_prior_draws),
+         type = "l", col = "Gray",
+         xlim = c(0, 20))
+    h <- hist(IW_prior_draws, col = "Gray",
+              prob = TRUE,
+              xlim = c(0, 20), breaks = 1e6)
+    plot(h$mids, h$density, type = "l", col = "Gray", xlim = c(0, 20)) # <- THE METHOD!
+    
+    # When in doubt on the efficacy of the method you have chosen 
+    # to plot the prior in the IW case, check that it does what you
+    # want with the uniform case
+    rnorm_draws <- rnorm(1e6, mean = 0, sd = 1)
+    plot(density(rnorm_draws),
+         type = "l", col = "black", xlim = c(-5, 5), ylim = c(0, 0.5))
+    h <- hist(rnorm_draws, col = "Gray",
+              prob = TRUE,
+              xlim = c(-5, 5), ylim = c(0, 0.5),
+              breaks = 100)
+    lines(h$mids, h$density, type = "l", xlim = c(-5, 5), ylim = c(0, 0.5),
+          col = "Gray", lty = 2)
+    
+  # Univaraite F
+    lines(sdseq,
+          df_freeb_SD(sdseq, 
+                      nu = 2, d = 1, 
+                      b = sqrt(pg[which_pri, param])), # the prior guess goes here!
+          type = "l", col = "Gray")
+  # Correlation
+    nu    = 2
+    delta = 1
+    B     = diag(2)
+    reps <- 1e7
+    prior_draws <- matrix(rep(NA, reps*4), ncol = 4)
+    for (i in 1:reps) {
+      Omega <- rwish(nu, B)
+      Psi <- riwish(delta+2-1, Omega)
+      prior_draws[i, ] <- c(Psi)
+    }
+    #
+     <- sqrt(prior_draws)
+    plot(density(prior_draws[, 1]))
+    

@@ -1,6 +1,10 @@
 ### Project:     Master Thesis
 ### Object:      Function to compute density for univ-F distribution with free scale parameter choice.
-### Description: Contains the R-function for the PDF defined in Mulder Pericchi 2018 in eq 1 and 2
+### Description: Contains the R-function for:
+###              1) density for univariate-F (free scale parameter) defined in Mulder Pericchi 2018 in eq 1 and 2
+###              2) density for noncentral-t
+###              3) density for folded-t
+###              You can call this functions to plot the priors for the parameters of interest (variances)
 ### Date:        2019-03-19
 
 
@@ -17,14 +21,53 @@
   
 # Non centralised t density function example
 # Source: Defining an arbitrary density function (Bayesian Statisitcs Course: exercise set 6.3c) 
-  dt_nc <- function(x,nu,mu,sigma2){
+# pdf: https://en.wikipedia.org/wiki/Student%27s_t-distribution#Generalized_Student's_t-distribution
+  #  logarithmic version
+  dt_nc_sigma2_log <- function(x,nu,mu,sigma2){
     exp( lgamma( (nu+1)/2 ) - lgamma(nu/2) - .5*log(pi*nu*sigma2) - (nu+1)/2 * log( 1+(x-mu)**2/(nu*sigma2) ) )
   }
+  
+  dt_nc_sigma <- function(x, nu, mu, sigma){
+    (gamma((nu + 1)/2))/(gamma(nu/2)*sqrt(pi*nu)*sigma) * (1+1/nu*((x-mu)**2)/sigma)**(-(nu+1)/2)
+  }
+  
+  # # How does it look like?
+  # sdseq <- sqrt(seq(0, 3000, length = 100000))
+  # plot(sdseq, dt_nc_sigma2_log(sdseq, nu = 2, mu = 0, sigma2 = 100), type = "l")
+  # plot(sdseq, dt_nc_sigma(sdseq, nu = 2, mu = 0, sigma = 100), type = "l")
+  
 # Folded-t (Half-Cauchy when mu = 0, nu = 1)
-  dt_folded <- function(x,nu,mu,sigma2){
+  # pdf: https://en.wikipedia.org/wiki/Student%27s_t-distribution#Generalized_Student's_t-distribution
+  # w/ taking absolute value of x (folded), setting mu = 0 (half-t)
+  # In terms of sigma**2
+  dt_folded_sigma2 <- function(x,nu,mu,sigma2){
     exp( lgamma( (nu+1)/2 ) - lgamma(nu/2) - .5*log(pi*nu*sigma2) - (nu+1)/2 * log( 1+(x-mu)**2/(nu*sigma2) ) ) + 
       exp( lgamma( (nu+1)/2 ) - lgamma(nu/2) - .5*log(pi*nu*sigma2) - (nu+1)/2 * log( 1+(x+mu)**2/(nu*sigma2) ) )
   }
+  # In terms of sigma
+  dt_folded_sigma <- function(x, nu, mu, sigma){
+    (gamma((nu + 1)/2))/(gamma(nu/2)*sqrt(pi*nu)*sigma) * (1+1/nu*((x-mu)**2)/sigma)**(-(nu+1)/2) + 
+      (gamma((nu + 1)/2))/(gamma(nu/2)*sqrt(pi*nu)*sigma) * (1+1/nu*((x+mu)**2)/sigma)**(-(nu+1)/2)
+  }
+  
+  # # How deos it look like
+  # sdseq <- sqrt(seq(0, 3000, length = 100000)) # important to plot the piror
+  # plot(sdseq, dt_folded_sigma2(sdseq, nu = 2, mu = 0, sigma2 = 100), type = "l")
+  # plot(sdseq, dt_folded_sigma(sdseq, nu = 2, mu = 0, sigma = 100), type = "l")
+  
+# Inverse Wishart
+  draw_InvWish = function(n,bMat,S0=diag(2)){
+  ScaleMatrix = S0
+  PsiInvDraw = rwish(v = n + 1,               # nu0 = 1
+                                              # usually nu0 = 2, v = n + 2; you changed to 1 for reasons specified in the manuscript
+                     S = solve(ScaleMatrix))  # distirbution is just Wishart, not inverse! Therefore, the guess priovaded is invterted!
+  return(PsiInvDraw)
+}
+
+  
+  
+# Scrap  
+
   # x <- abs(seq(-30, 30))
   # plot(x, 
   #      dt_nc(x,nu = 1, mu = 0, sigma2 = 1), # these values of nu and mu make this dist. an half cauchy
