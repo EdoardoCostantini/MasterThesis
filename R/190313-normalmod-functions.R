@@ -101,8 +101,8 @@ draw_PsiInv_HW = function(PsiInv,avec,bMat,n){
   # where S0 is a prior guess for the random effects var-cov matrix
 draw_PsiInv_InvWish = function(n,bMat,S0=diag(2)){
   ScaleMatrix = t(bMat)%*%bMat + S0
-  PsiInvDraw = rwish(v = n + 1,               # nu0 = 1
-                                              # usually nu0 = 2, v = n + 2; you changed to 1 for reasons specified in the manuscript
+  PsiInvDraw = rwish(v = n + 2,               # nu0 = 2
+                                              # usually nu0 = 2, v = n + 2; needs to be nu = k - 1 + e
                      S = solve(ScaleMatrix))  # distirbution is just Wishart, not inverse! Therefore, the guess priovaded is invterted!
   return(PsiInvDraw)
 }

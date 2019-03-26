@@ -55,17 +55,6 @@
   # plot(sdseq, dt_folded_sigma2(sdseq, nu = 2, mu = 0, sigma2 = 100), type = "l")
   # plot(sdseq, dt_folded_sigma(sdseq, nu = 2, mu = 0, sigma = 100), type = "l")
   
-# Inverse Wishart
-  draw_InvWish = function(n,bMat,S0=diag(2)){
-  ScaleMatrix = S0
-  PsiInvDraw = rwish(v = n + 1,               # nu0 = 1
-                                              # usually nu0 = 2, v = n + 2; you changed to 1 for reasons specified in the manuscript
-                     S = solve(ScaleMatrix))  # distirbution is just Wishart, not inverse! Therefore, the guess priovaded is invterted!
-  return(PsiInvDraw)
-}
-
-  
-  
 # Scrap  
 
   # x <- abs(seq(-30, 30))
