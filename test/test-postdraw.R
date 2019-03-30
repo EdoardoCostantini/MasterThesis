@@ -84,7 +84,7 @@ context('POSTERIOR DRAWS functions')
 
 # Test: draw_PsiInv_HW ####
 
-  outDummy <- draw_PsiInv_HW(PsiInv,avec,bMat,n)
+  outDummy <- draw_PsiInv_HW(PsiInv,avec,bMat,n,nu=2,eta=1/2,Ak=10**3)
     PsiInv_test <- outDummy[[1]]
     avec_test   <- outDummy[[2]]
 
@@ -98,7 +98,7 @@ context('POSTERIOR DRAWS functions')
   
 # Test: draw_PsiInv_InvWish ####
 
-  PsiInv_test <- draw_PsiInv_InvWish(n,bMat,S0=diag(2))
+  PsiInv_test <- draw_PsiInv_InvWish(n,bMat,S0=diag(2),e=1)
 
   tocheck   <- dim(PsiInv_test)
   benchmark <- c(2, 2)
@@ -110,7 +110,7 @@ context('POSTERIOR DRAWS functions')
 
 # Test: draw_PsiInv_matF ####
 
-  outDummy <- draw_PsiInv_matF(yvec,Xmat,Zi,bMat,PsiInv,Omega,B0Inv,n)
+  outDummy <- draw_PsiInv_matF(yvec,Xmat,Zi,bMat,PsiInv,Omega,B0Inv,n,d=1,nu=2)
     PsiInv_test <- outDummy[[1]]
     omega_test  <- outDummy[[2]]
 

@@ -61,7 +61,7 @@ context('MCMC functions')
                            n    = nrow(RiesbyDat)/J,
                            Zi   = cbind(rep(1, length = J), unique(Xmat[, 2])),
                            iniv = 1,
-                           B0   = 1e3*diag(2),
+                           B0   = list(nu=2,d=2,e=0,S0=1e3*diag(2)),
                            samsize = samsize,
                            burnin = burnin) )
   tocheck <- as.numeric(summary(out1)[, 1])
@@ -69,7 +69,30 @@ context('MCMC functions')
                  samsize*n*2,        # PD_bMat   same dim as defined in the MCMC function
                  samsize*ncol(Zi)*2, # PD_Psi    same dim as defined in the MCMC function
                  samsize*ncol(Zi)*2, # PD_Psi_sd same dim as defined in the MCMC function
-                 samsize*ncol(Zi)*2) # PD_Omega   same dim as defined in the MCMC function
+                 samsize*ncol(Zi)*2, # Omega
+                 4) # PD_Omega   same dim as defined in the MCMC function
+
+  # test
+  test_that('TEST: MCMC_matF - dimensionality', {
+    expect_equal(tocheck, benchmark)
+  })
+  
+  # Test Functions
+  quiet( out1 <- MCMC_invWish(yvec = RiesbyDat$depr,
+                       Xmat = cbind(rep(1, nrow(RiesbyDat)), RiesbyDat$week, RiesbyDat$endog, RiesbyDat$week*RiesbyDat$endog),
+                       J    = length(unique(RiesbyDat$week)),
+                       n    = nrow(RiesbyDat)/J,
+                       Zi   = cbind(rep(1, length = J), unique(Xmat[, 2])),
+                       iniv = 0,
+                       B0   = list(nu=2,e=1,S0=diag(2)),
+                       samsize = samsize,
+                       burnin = burnin) )
+  tocheck <- as.numeric(summary(out1)[, 1])
+  benchmark <- c(samsize*ncol(Xmat), # PD_theta  same dim as defined in the MCMC function
+                 samsize*n*2,        # PD_bMat   same dim as defined in the MCMC function
+                 samsize*ncol(Zi)*2, # PD_Psi    same dim as defined in the MCMC function
+                 samsize*ncol(Zi)*2, # PD_Psi_sd same dim as defined in the MCMC function
+                 3) # number of objects in a list prior (nu (useless), e, S0)
 
   # test
   test_that('TEST: MCMC_invWish - dimensionality', {

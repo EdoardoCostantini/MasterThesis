@@ -8,7 +8,6 @@
 \usepackage{amsmath}					 % matrix
 \usepackage[a4paper, total={17cm, 23cm}]{geometry} %a4 = 21cm x 29.7cm
 
-
 \begin{document}
 Here I define the Bayesian model I want to use to test the performance of the different priors. The features I want to include are the folowing: continuous outcome, any number/measurement scale.
 
@@ -41,18 +40,36 @@ For what concerns the random effects variance covariance matrix, different prior
 p(\bm{\Psi}) \propto IW(\nu, S_{0})
 \end{equation}	
 
-where we choose $\nu = 1$, and $S_{0}=diag(2)$, following indications by Gelman \textit{et al} (2014). Thanks to the partitioning property, we know that the diagonal components of $\Psi$ have an inverse-Wisharet distribution themselves. Furthermore, for a univariate case, we know that an inverse Wishart distribution simplifies to an inverse Gamma with parameters $p=1, \alpha=\frac{\nu}{2}, \beta = \frac{S_{0kk}}{2}$.
+where we choose $\nu = k-1+e$, and $S_{0}=diag(k-1+e)$, following indications by Gelman \textit{et al} (2014). Thanks to the partitioning property, we know that the diagonal components of $\Psi$ have an inverse-Wisharet distribution themselves. Furthermore, for a univariate case, we know that an inverse Wishart distribution simplifies to an inverse Gamma with parameters $k=1, \alpha=\frac{\nu}{2}, \beta = \frac{S_{0kk}}{2}$. The inverse-Wishart priors we are trying are:
+\begin{center}
+\begin{tabular}{ c c c }
+ Prior Description & $\nu$ & $S_{0}$ \\ 
+ \hline
+ \multicolumn{1}{l}{1. IW uninformative} & $k-1+e$ & diag(k-1+e) \\  
+ \multicolumn{1}{l}{2. IW educated} & $k-1+e$ & educated guess \\
+ \hline
+\end{tabular}
+\end{center}
 
 	\item inverse-Wishart \textit{a là} Huang and Wand
 
 \begin{equation}
 	\begin{split}
-	p(\bm{\Psi|a_1, a_2})& \propto IW(\nu + p - 1, 2\nu \times diag(1/a_1, 1/a_2)), \\
+	p(\bm{\Psi}|a_1, a_2)& \propto IW(\nu + k - 1, 2\nu \times diag(1/a_1, 1/a_2)), \\
 	a_k& \propto IG(1/2,1/A_k^2),
 	\end{split}
 \end{equation}
 
-with $\nu = 2$ and $\bm{A} = [100, 100]$. According to Huang and Wand (2013, p. 441) arbitrarily large values for $a_k$ lead to arbitrarily weak priors on the standard deviation term, and the choice of $\nu$ leads to marginal uniform distributions on the correlation terms.
+with $\nu = 2$ and $\bm{A} = [1000, 1000]$. The marginal distribution of any standard deviation term in $\bm{\Psi}$ is Half-\textit{t}$(\nu, A_k)$ and, when choosing $\nu = 2$, the marginal disitbrution on the correlation term is uniform on (-1, 1), see property 2 to 4 in Huang and Wand (2013, p. 442). Furthermore, according to Huang and Wand (2013, p. 441) arbitrarily large values for $a_k$ lead to arbitrarily weak priors on the standard deviation term. Hence, our choices for the parameter of this prior are: 
+	
+\begin{center}
+\begin{tabular}{ c c c }
+ Prior Description & $\nu$ & $\bm{A}$ \\ 
+ \hline
+ \multicolumn{1}{l}{3. IW a là HW} & $2$ & $[1000, 1000]$ \\  
+ \hline
+\end{tabular}
+\end{center}	
 	
 	\item Matrix-F variate
 	
@@ -63,8 +80,21 @@ p(\bm{\Psi})& \propto F(\bm{\Psi}; \nu, \delta, \bm{B}) \\
 \end{split}
 \end{equation}	
 
-where $\nu = 2$, $\delta = 1$, and $\bm{B}$ is a prior guess. Three different choices where made for $\bm{B}$ in this paper: diag($10^3$), proper neighbor of $(\sigma^2)^{-\frac{1}{2}}$; $\bm{B}_{ed}$, an educated guess based on data exploration, $\bm{R^*}$ and an empirical bayes choice following Kass and Natarajan (2006). \\
-Considering a $2 \times 2$ random effects variance covariance matrix (random intercepts, and random slopes) that is matrix-F distirbuted, $F(\nu, \delta, \bm{B})$, the marginal distribution on the standard deviations of the random effects are univariate $F(\nu, \delta, b_{11})$ and $F(\nu, \delta, b_{22})$, with $\nu >1, \delta > 0, b_{jj} > 0$. There we chose the first integer number we could for the parameters $\nu$, and $\delta$.
+with degrees of freedom $\nu>k-1$, $\delta>0$, and $\bm{B}$ a positive definite scale matrix that functions as prior guess. Three different choices where made for $\bm{B}$ in this paper: diag($10^3$), proper neighbor of $(\sigma^2)^{-\frac{1}{2}}$; $\bm{B}_{ed}$, an educated guess based on data exploration, $\bm{R^*}$ and an empirical bayes choice following Kass and Natarajan (2006). \\
+Considering a $2 \times 2$ random effects variance covariance matrix (random intercepts, and random slopes) that is matrix-F distirbuted, $F(\nu, \delta, \bm{B})$, the marginal distribution on the standard deviations of the random effects are univariate $F(\nu, \delta, b_{11})$ and $F(\nu, \delta, b_{22})$, with $\nu >1, \delta > 0, b_{jj} > 0$. There we chose the first integer number we could for the parameters $\nu$, and $\delta$. When I chose $\delta = 2$, I was thinking of staying close to what has been done in Mulder Pericchi. When I chose $\delta=e$ I wanted to try with some uninformative prior that got as close as possible to non-informative.
+
+\begin{center}
+\begin{tabular}{ c c c c }
+ Prior Description & $\nu$ & $\delta$ & $S_{0}$ \\ 
+ \hline
+ \multicolumn{1}{l}{4. mat-F proper neighbor} & $2$ & $2$ & $10^3 \times \bm{I}_2$ \\
+ \multicolumn{1}{l}{5. mat-F uninformative} & $k-1+e$ & $e$ & educated guess \\
+ \multicolumn{1}{l}{6. mat-F educated guess} & $2$ & $2$ & educated guess \\ 
+ \multicolumn{1}{l}{7. mat-F empirical Bayes} & $2$ & $2$ & \textbf{\textit{R}}* \\
+ \hline
+\end{tabular}
+\end{center}
+
 \end{itemize}
 
 The derivation of the conditional posterior follows.
@@ -235,25 +265,39 @@ the full conditional posterior of $\bm{\Psi}$ is
 where $\eta = \frac{1}{2}, \nu = 2, k = 2$, and $n$ is the number of clusters (individuals). (For the conditional posterior of $a_k$ refer to Huang and Wand (2013), section 4.2).
 	
 	\item Matrix-F variate
-	
+
+Following section 2.3 in Mulder and Pericchi (2018), instead of working directly with the $\bm{\Psi} \sim F(\nu, \delta, \bm{B})$ we apply the parameter expansion defined above (see section on priors) and model it as $\bm{\Psi} \sim IW(\delta + k - 1, \bm{\Omega})$ with $\bm{\Omega} \sim W(\nu, \bm{B})$. With this parameter expansion, the conditional priors are: 
 \begin{equation*}
  \begin{split} 
-  p(\bm{\Psi})& \propto F(\bm{\Psi}; \nu, \delta, \bm{B}) \\
-  & \propto \int IW(\bm{\Psi}; \delta + k - 1, \bm{\Omega}) \times W(\bm{\Omega}; \nu, \bm{B})d\bm{\Omega} \\
-  & \propto \int |\bm{\Psi}|^{-\frac{(\delta+2k)}{2}}exp\left(-\frac{1}{2}tr(\bm{\Omega}\bm{\Psi}^{-1})\right) \times |\bm{\Omega}|^{-\frac{(\nu-k-1)}{2}}exp\left(-\frac{1}{2}tr(\bm{\Omega}\bm{B}^{-1})\right)d\bm{\Omega}
+  \bm{\Psi|\Omega}& \sim IW(\delta+k-1, \bm{\Omega}) \\
+  \bm{\Omega|\Psi}& \sim W(\nu+\delta+k-1, (\bm{\Psi}^{-1} + \bm{B}^{-1})^{-1}) \\
  \end{split}
-\end{equation*}	
+\end{equation*}
+% Old workout of matrix F (keep for a bit)
+%\begin{equation*}
+% \begin{split} 
+%  p(\bm{\Psi})& \propto F(\bm{\Psi}; \nu, \delta, \bm{B}) \\
+%  & \propto \int IW(\bm{\Psi}; \delta + k - 1, \bm{\Omega}) \times W(\bm{\Omega}; \nu, \bm{B})d\bm{\Omega} \\
+%  & \propto \int |\bm{\Psi}|^{-\frac{(\delta+2k)}{2}}exp\left(-\frac{1}{2}tr(\bm{\Omega}\bm{\Psi}^{-1})\right) \times |\bm{\Omega}|^{-\frac{(\nu-k-1)}{2}}exp\left(-\frac{1}{2}tr(\bm{\Omega}\bm{B}^{-1})\right)d\bm{\Omega}
+% \end{split}
+%\end{equation*}
 
-the full conditional posterior of $\bm{\Psi}$ is
-
-\begin{equation}
+which makes the full conditional posterior of:
+\begin{equation*}
  \begin{split} 
-  p(\bm{\Psi}|.)& \propto \int |\bm{\Psi}|^{-\frac{(\delta+2k+n)}{2}}exp\left(-\frac{1}{2}tr([\bm{\Omega}+\bm{S}_b]\bm{\Psi}^{-1})\right) \times |\bm{\Omega}|^{-\frac{(\nu-k-1)}{2}}exp\left(-\frac{1}{2}tr(\bm{\Omega}\bm{B}^{-1})\right)d\bm{\Omega} \\
-  & \propto \int IW(\delta+k+n-1, \bm{\Omega} + \bm{S}_{b}) \times W(\nu, \bm{B})d\bm{\Omega}
+  \bm{\Psi|\Omega},.& \sim IW(\delta+k-1+n, \bm{S}_b + \bm{\Omega}) \\
+  \bm{\Omega|\Psi},.& \sim W(\nu+\delta+k-1, (\bm{\Psi}^{-1} + \bm{B}^{-1})^{-1}) \\
  \end{split}
-\end{equation}			
+\end{equation*}
+% Old workout of matrix F (keep for a bit)
+%\begin{equation}
+% \begin{split} 
+%  p(\bm{\Psi}|.)& \propto \int |\bm{\Psi}|^{-\frac{(\delta+2k+n)}{2}}exp\left(-\frac{1}{2}tr([\bm{\Omega}+\bm{S}_b]\bm{\Psi}^{-1})\right) \times |\bm{\Omega}|^{-\frac{(\nu-k-1)}{2}}exp\left(-\frac{1}{2}tr(\bm{\Omega}\bm{B}^{-1})\right)d\bm{\Omega} \\
+%  & \propto \int IW(\delta+k+n-1, \bm{\Omega} + \bm{S}_{b}) \times W(\nu, \bm{B})d\bm{\Omega}
+% \end{split}
+%\end{equation}			
 
-with $\nu = k = 2, \delta = 1$ and $\bm{B}$ prior guess
+with parameters as defined above. Given these posteriors, the Gibbs sampler implementation is straightforward.
 	
 \end{itemize}
 

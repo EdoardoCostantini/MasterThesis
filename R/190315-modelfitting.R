@@ -6,6 +6,7 @@
 
 # Packages
   library(ddpcr)
+  library(parallel)
 
 # Load Sampling functions
   #setwd("/Users/Edoardo/DriveUni/MasterThesis/BayesianThesis")
@@ -24,16 +25,79 @@
   dat_Zi   <- cbind(rep(1, length = length(unique(dat_ALL$xvec))), unique(dat_ALL$xvec))
   dat_ALLn <- nrow(dat_ALL)/length(unique(dat_ALL$xvec)) # need it for conditons definition
   
-  # # Schiz dat
-  # schizdata <- read.table("./data/schizdata_noNA.txt")
-  #   head(schizdata)
-  # dat_ALL <- data.frame(cluster = schizdata$id,     #constant dataset w/ naming that fits the loop
-  #                       yvec    = schizdata$SevIll, #you only need to change the variables included here
-  #                       xvec    = schizdata$week,   #and everything will be adapted in the loop
-  #                       cvec    = schizdata$drug,
-  #                       inter   = schizdata$inter)
-  # dat_Zi   <- cbind(rep(1, length = length(unique(dat_ALL$xvec))), unique(dat_ALL$xvec))
-  # dat_ALLn <- nrow(dat_ALL)/length(unique(dat_ALL$xvec)) # need it for conditons definition
+# NEW ---------------------------------------------------------------------
+
+  # To do: Loop scheme across conditions
+  # First define the observation conditons: how many clusters, how many observations
+  # Then implement
+
+    clusters_goal <- clusters4cond[[outps]]
+  dat           <- dat_ALL # here select the observations you want  
+  
+  # Define Data for function
+  dat_yvec     <- dat$yvec
+  dat_Xmat     <- cbind(rep(1, nrow(dat)), dat$xvec, dat$cvec, dat$inter)
+  dat_J        <- length(unique(dat$xvec))
+  dat_n        <- nrow(dat)/dat_J
+  dat_Zi       <- cbind(rep(1,length = dat_J), unique(dat_Xmat[, 2]))
+  dat_subjects <- dat$cluster
+  
+
+  # Define the priors
+  source("./R/190330-hyperparameters.R")
+  # priors are defined in this R script for ease
+  # by sourcing this code, you get a list for each type of prior
+  # (ie inverse-Wishart, matrix-F, HW does not need it)
+  # where the objects contained in the list are the actual priors
+  # usually to be included in the "B0 = " argument of your sampling functions
+  
+  # Sampling Repetitions
+  MCMC_reps   <- 50
+  MCMC_burnin <- 1/10
+  
+  # Fit with invWishart Prior
+  out_IW <- mcmapply(MCMC_invWish, IW_PR,
+                     MoreArgs = list(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 1),
+                     SIMPLIFY = FALSE)
+  str(out_IW)
+  
+  # Fit with HW prior
+        quiet(
+  out_HW <- MCMC_HWprior(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
+                         iniv = 1)
+        )
+  str(out_HW)
+  
+  out_MF <- mcmapply(MCMC_matF, MF_PR,
+                     MoreArgs = list(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 1),
+                     SIMPLIFY = FALSE)
+  str(out_MF)
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+# OLD ---------------------------------------------------------------------
+
+
   
 # Define psi priors
   B0_pn  <- 1e3*diag(2) # mat-f proper neighbour guess
@@ -224,7 +288,45 @@ timetaken <- stop - go
   
   
 # SCRAPS ------------------------------------------------------------------
-#   
+  # # Schiz dat
+  # schizdata <- read.table("./data/schizdata_noNA.txt")
+  #   head(schizdata)
+  # dat_ALL <- data.frame(cluster = schizdata$id,     #constant dataset w/ naming that fits the loop
+  #                       yvec    = schizdata$SevIll, #you only need to change the variables included here
+  #                       xvec    = schizdata$week,   #and everything will be adapted in the loop
+  #                       cvec    = schizdata$drug,
+  #                       inter   = schizdata$inter)
+  # dat_Zi   <- cbind(rep(1, length = length(unique(dat_ALL$xvec))), unique(dat_ALL$xvec))
+  # dat_ALLn <- nrow(dat_ALL)/length(unique(dat_ALL$xvec)) # need it for conditons definition
+  
+  # system.time(
+  #   outMcap <- mcmapply(MCMC_invWish, IW_PRIORS,
+  #                       MoreArgs = list(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 1),
+  #                       SIMPLIFY = FALSE)
+  # )
+  # str(outMcap)
+  # 
+  # # With a loop
+  # system.time(
+  #   for (i in 1:2) {
+  #     outLoop[[i]] <- MCMC_invWish(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
+  #                                  iniv = 1,     # the starting values option (1 = lme4 estimates)
+  #                                  B0   = B0_iW[[i]]) # the prior guess you are using
+  #   }
+  # )
+  # str(outLoop)
+  
+  # Define Priors for Psi
+  # B0_pn  <- 1e3*diag(2) # mat-f proper neighbour guess
+  # B0_iW  <- diag(2)     # guess of inverse Wishart prior that should ressamble the IG(e,e) from Gelman
+  #                       # for now follow Gelman 2014 (p.73) indication of non-informative choice
+  # Rstar <- solve(t(dat_Zi)%*%dat_Zi) #this will be defined in the loop because it depedns on Zi
+  # B0_ed  <- matrix(c(20, 0, 0, 9), ncol = 2) # guess based on data exploration and knowledge
+
+
+    
+    
+    
 #   output <- vector("list", 5)
 #   output[[1]] <- MCMC_HWprior(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
 #                        iniv = 1

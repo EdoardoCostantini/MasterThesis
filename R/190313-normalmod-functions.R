@@ -61,54 +61,58 @@ draw_sigam2_IGprior = function(nu0,sigma20){
 }
 
 # Psi Matrix draws
-# Using Mat-F prior
-draw_PsiInv_matF = function(yvec,Xmat,Zi,bMat,PsiInv,Omega,B0Inv,n){
-  
-  #credits for function: Mulder Pericchi, 2018
-  ScaleMatrix = t(bMat)%*%bMat + Omega # current data estimation of random effect covariance matrix
-                                       # + Omega = Previuos draw (or initial guess)
-  PsiInvDraw = rwish(v = n + 2,
-                     S = solve(ScaleMatrix))
-  
-  ScaleOmega = solve(PsiInvDraw + B0Inv)
-  Omega = rwish(v = 4,                # k = 4 (4 predicotrs: intercept, time, covariate, time*covariate)
-                S = ScaleOmega)
+# Draws w/ Mat-F prior
+draw_PsiInv_matF = function(yvec,Xmat,Zi,bMat,PsiInv,Omega,B0Inv,n,d=1,nu=2){
+  # Prior Parameters
+    k  <- ncol(bMat)
+    nu <- nu # > k-1 (e.g. k-1+e)
+    d  <- d  # > 0   (e.g. e)
+  # Psi|Omega,.
+      ScaleMatrix = t(bMat)%*%bMat + Omega      # current data estimation of random effect covariance matrix + Omega = Previuos draw (or initial guess)
+    PsiInvDraw = rwish(v = (n) + (d + k + 1),   # (n) + (d + k - 1) = (posterior) + (prior contribution) [original: n + 2]
+                       S = solve(ScaleMatrix))
+  # Omega|Psi,.
+      ScaleOmega = (PsiInvDraw + B0Inv)
+    Omega = rwish(v = nu + d + k - 1,           # nu + d + k - 1 = 4 when? (all prior: no information directly available on Omega) [original: 4]
+                  S = solve(ScaleOmega))
   
   return(list(PsiInvDraw,Omega))
   
 }
-
-# Using Huang and Wand 2018 inv-Wish
-draw_PsiInv_HW = function(PsiInv,avec,bMat,n){
-  #credits for function: Mulder Pericchi, 2018
-  #prior of Huang & Wand with scale A_k=10^5 and nu=2.
-  Ak = 10**5
-  ScaleMatrix = t(bMat)%*%bMat +               # sum of ui %*% ui'
-                2*2*diag(1/avec)               # nu = 2
-  PsiInvDraw = rwish(v = n + 3,                # nu + N + q - 1, where: nu = 2, q = 2, n = 30 (number of clusters), 
-                                               # result is m + 3 (changing nu changes this sum. if nu = 1 -> + 2, nu = 2 -> + 3)
-                     S = solve(ScaleMatrix))
-  
-  scale_avec = 2*diag(PsiInvDraw) + 1/Ak**2    # a_k scale parameter in Haung Wand 2013 (section 4 full conditionals)
-  avec = rinvgamma(2,                          # k = 2: 1 random intercept, 1 random slope
-                   shape = 2,                  # (nu + k) /2, where k = 2, nu = 2
-                   scale = scale_avec)
+# Draws w/ HW prior
+draw_PsiInv_HW = function(PsiInv,avec,bMat,n,nu=2,eta=1/2,Ak=10**3){
+  # Prior Parameters
+    # nu  <- 2; eta <- 1/2; Ak  <- 10**3
+    k   <- ncol(bMat)
+  # Posterior samples
+    ScaleMatrix = t(bMat)%*%bMat +               # sum of ui %*% ui'
+                  2*nu*diag(1/avec)              
+    PsiInvDraw = rwish(v = n + nu + k - 1,       # e.g.: nu = 2, k = 2, n = 30 (number of clusters), 
+                       S = solve(ScaleMatrix))
+    
+    scale_avec = 2*diag(PsiInvDraw) + 1/Ak**2    # a_k scale parameter in Haung Wand 2013 (section 4 full conditionals)
+    avec = rinvgamma(2,                          # k = 2: 1 random intercept, 1 random slope
+                     shape = eta*(nu + k),       # (nu + k) /2, where k = 2, nu = 2
+                     scale = scale_avec)
   
   return(list(PsiInvDraw,avec))
 }
 
-# Using prior invW(nu0, solve(S0))
-  # where S0 is a prior guess for the random effects var-cov matrix
-draw_PsiInv_InvWish = function(n,bMat,S0=diag(2)){
-  ScaleMatrix = t(bMat)%*%bMat + S0
-  PsiInvDraw = rwish(v = n + 2,               # nu0 = 2
-                                              # usually nu0 = 2, v = n + 2; needs to be nu = k - 1 + e
-                     S = solve(ScaleMatrix))  # distirbution is just Wishart, not inverse! Therefore, the guess priovaded is invterted!
+# Draws w/ prior IW(nu0, solve(S0))
+draw_PsiInv_InvWish = function(n,bMat,S0=diag(2),e=1){
+  # Prior definition
+    k <- ncol(bMat)
+    nu0 <- k - 1 + e
+  # Posterior samples
+    ScaleMatrix = t(bMat)%*%bMat + S0
+    PsiInvDraw = rwish(v = n + nu0,             # nu0 = 2
+                                                # usually nu0 = 2, v = n + 2; needs to be nu = k - 1 + e
+                       S = solve(ScaleMatrix))  # distirbution is just Wishart, not inverse! Therefore, the guess priovaded is invterted!
   return(PsiInvDraw)
 }
 
 
-# Test Draw Functions ----------------------------------------------------------
+# # Test Draw Functions ----------------------------------------------------------
 # # Test with HW inv-Wish prior
 # # Load some data
 #   RiesbyDat <- read.table("./data/RiesbyDat.txt")
@@ -153,7 +157,7 @@ draw_PsiInv_InvWish = function(n,bMat,S0=diag(2)){
 #     theta    <- draw_theta(yvec,Xmat,Zi,bMat,sigma2)
 #     bMat     <- draw_bMat(yvec,Xmat,Zi,theta,bi0,bMat,sigma2,PsiInv)
 #     sigma2   <- draw_sigam2_IMPprior(yvec,Xmat,Zi,theta,bMat)
-#     outDummy <- draw_PsiInv_HW(PsiInv,avec,bMat)
+#     outDummy <- draw_PsiInv_HW(PsiInv,avec,bMat,n)
 #       PsiInv <- outDummy[[1]]
 #       avec   <- outDummy[[2]]
 # 
@@ -167,11 +171,12 @@ draw_PsiInv_InvWish = function(n,bMat,S0=diag(2)){
 #     print(paste("Post-Sample:", ss))
 # 
 #     theta    <- draw_theta(yvec,Xmat,Zi,bMat,sigma2)
-#     bMat     <- draw_bMat(yvec,Xmat,Zi,theta,bi0,bMat,sigma2,PsiInv)
-#     sigma2   <- draw_sigam2_IMPprior(yvec,Xmat,Zi,theta,bMat)
+#     bMat     <- draw_bMat(yvec,Xmat,Zi,theta,bi0,bMat,sigma2,PsiInv,n,J)
+#     sigma2   <- draw_sigam2_IMPprior(yvec,Xmat,Zi,theta,bMat,n,J)
 #     outDummy <- draw_PsiInv_HW(PsiInv,avec,bMat)
 #       PsiInv <- outDummy[[1]]
 #       avec   <- outDummy[[2]]
+#     PsiInv <- draw_PsiInv_InvWish(n,bMat,S0=diag(2), e = 1)
 # 
 # 
 #     PD_theta[ss,] = theta
