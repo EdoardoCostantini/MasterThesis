@@ -8,12 +8,6 @@
   library(ddpcr)
   library(parallel)
 
-# Load Sampling functions
-  #setwd("/Users/Edoardo/DriveUni/MasterThesis/BayesianThesis")
-  source("./R/190313-normalmod-functions.R")
-  source("./R/190317-MCMC-functions.R")
-  source("./R/190318-priorplot-functions.R")
-
 # Load data
   # Riesbt dat
   RiesbyDat <- read.table("./data/RiesbyDat.txt")
@@ -24,61 +18,124 @@
                         inter   = RiesbyDat$inter)
   dat_Zi   <- cbind(rep(1, length = length(unique(dat_ALL$xvec))), unique(dat_ALL$xvec))
   dat_ALLn <- nrow(dat_ALL)/length(unique(dat_ALL$xvec)) # need it for conditons definition
+
+# Load Sampling functions
+  #setwd("/Users/Edoardo/DriveUni/MasterThesis/BayesianThesis")
+  source("./R/190313-normalmod-functions.R")
+  source("./R/190317-MCMC-functions.R")
+  source("./R/190330-hyperparameters.R")
+    # priors are defined in this R script for ease
+    # by sourcing this code, you get a list for each type of prior
+    # (ie inverse-Wishart, matrix-F, HW does not need it)
+    # where the objects contained in the list are the actual priors
+    # usually to be included in the "B0 = " argument of your sampling functions
+  source("./R/190318-priorplot-functions.R")
+
   
 # NEW ---------------------------------------------------------------------
-
-  # To do: Loop scheme across conditions
-  # First define the observation conditons: how many clusters, how many observations
-  # Then implement
-
-    clusters_goal <- clusters4cond[[outps]]
-  dat           <- dat_ALL # here select the observations you want  
   
-  # Define Data for function
-  dat_yvec     <- dat$yvec
-  dat_Xmat     <- cbind(rep(1, nrow(dat)), dat$xvec, dat$cvec, dat$inter)
-  dat_J        <- length(unique(dat$xvec))
-  dat_n        <- nrow(dat)/dat_J
-  dat_Zi       <- cbind(rep(1,length = dat_J), unique(dat_Xmat[, 2]))
-  dat_subjects <- dat$cluster
+# Conditions
+  n_cond <- c(46, 20, 8, 4)
+  J_cond <- c(6, 4, 3)
+  conds <- expand.grid(n_cond, J_cond)[order(expand.grid(n_cond, J_cond)[,1], decreasing = T),][-c(2,3), ]
+  #conds <- expand.grid(n_cond, J_cond)[order(expand.grid(n_cond, J_cond)[,1], decreasing = T),][c(1,4), ]
   
-
-  # Define the priors
-  source("./R/190330-hyperparameters.R")
-  # priors are defined in this R script for ease
-  # by sourcing this code, you get a list for each type of prior
-  # (ie inverse-Wishart, matrix-F, HW does not need it)
-  # where the objects contained in the list are the actual priors
-  # usually to be included in the "B0 = " argument of your sampling functions
+# Storing Objects
+  output <- vector("list", nrow(conds))
+  names(output) <- c(paste0("n", conds[,1],"_", "J", conds[,2]))
+  out_IW <- out_HW <- out_MF <- output
+  # you have to fix the sampling functions to accomodate for different J sies!
   
-  # Sampling Repetitions
-  MCMC_reps   <- 50
-  MCMC_burnin <- 1/10
+  RNGkind("L'Ecuyer-CMRG")
+  set.seed(190331) 
   
-  # Fit with invWishart Prior
-  out_IW <- mcmapply(MCMC_invWish, IW_PR,
-                     MoreArgs = list(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 1),
-                     SIMPLIFY = FALSE)
+  for (outps in 1:nrow(conds)) {
+    # Selection of clusters and observations
+    n_goal <- conds[outps, 1]
+    J_goal <- conds[outps, 2]
+    if(n_goal == 46){
+      dat <- dat_ALL
+    } else{
+      clusters_goal <- sample(unique(dat_ALL$cluster), n_goal)
+      obs_goal <- unique(dat_ALL$xvec)[1:J_goal]
+      dat <- dat_ALL[dat_ALL$cluster %in% clusters_goal & dat_ALL$xvec %in% obs_goal, ]
+    }
+    
+    # Define Data for function
+    dat_yvec     <- dat$yvec
+    dat_Xmat     <- cbind(rep(1, nrow(dat)), dat$xvec, dat$cvec, dat$inter)
+    dat_J        <- length(unique(dat$xvec))
+    dat_n        <- nrow(dat)/dat_J
+    dat_Zi       <- cbind(rep(1,length = dat_J), unique(dat_Xmat[, 2]))
+    dat_subjects <- dat$cluster
+    
+    # Sampling Repetitions
+    MCMC_reps   <- 50
+    MCMC_burnin <- 1/10
+    # IW
+    out_IW[[outps]] <- mcmapply(MCMC_invWish, IW_PR,
+                       MoreArgs = list(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 1),
+                       SIMPLIFY = FALSE)
+    # HW
+    quiet(
+      out_HW[[outps]] <- MCMC_HWprior(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
+                             iniv = 1)
+    )
+    out_MF[[outps]] <- mcmapply(MCMC_matF, MF_PR,
+                       MoreArgs = list(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 0),
+                       SIMPLIFY = FALSE)
+  }
+  
   str(out_IW)
+    out_IW$n46_J6$IW_e2$PD_Psi_sd[, 1]
+    
+  str(out_HW)
+    out_HW$n46_J6$PD_Psi_sd[, 1]
+    
+  str(out_MF)
+    out_MF$n46_J6$MF_e1$PD_Psi_sd[, 1]
+  
+    
+  # Check consistency with resulst of priors with old fitting method Previous results of prior
+  # Fit with invWishart Prior
+  # CHECKed: to obtain same prior as in old fit use the following prior list(e=1,S0=diag(2))
+  out_IW <- MCMC_invWish(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 1,
+               B0 = list(e=1,S0=diag(2)))
+  par(mfcol = c(2, 5))
+  plot(density(out_IW$PD_Psi_sd[,1]),xlim = c(0, 20), ylim = c(0,.6))
+  plot(density(out_IW$PD_Psi_sd[,4]),xlim = c(0, 20), ylim = c(0,.6))
+  plot(density(out_IW$PD_Psi_sd[,2]),xlim = c(-1, 1), ylim = c(0,2))
   
   # Fit with HW prior
+  # CHECKed: same results as with previous set up
         quiet(
   out_HW <- MCMC_HWprior(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
                          iniv = 1)
         )
   str(out_HW)
   
+  par(mfcol = c(2, 5))
+  plot(density(out_HW$PD_Psi_sd[,1]),xlim = c(0, 20), ylim = c(0,2))
+  plot(density(out_HW$PD_Psi_sd[,4]),xlim = c(0, 20), ylim = c(0,2))
+  plot(density(out_HW$PD_Psi_sd[,2]),xlim = c(-1, 1), ylim = c(0,2))
+  
+  # Fit with mat-f prior
+  # CHECKed: to obtain same priors as in old fit use list(nu=2,d=1,e=0,S0=1e3*diag(2)) (or other prior guess for S0)
+  outPN <- MCMC_matF(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 0,
+            B0 = list(nu=2,d=1,e=0,S0=1e3*diag(2)))
+  outPN <- MCMC_matF(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 0,
+            B0 = list(nu=2,d=1,e=0,S0=matrix(c(20, 0, 0, 9), ncol = 2)))
+  par(mfcol = c(2, 5))
+  plot(density(outPN$PD_Psi_sd[,1]),xlim = c(0, 20), ylim = c(0,.3))
+  plot(density(outPN$PD_Psi_sd[,4]),xlim = c(0, 20), ylim = c(0,.3))
+  plot(density(outPN$PD_Psi_sd[,2]),xlim = c(-1, 1), ylim = c(0,2))
+  
   out_MF <- mcmapply(MCMC_matF, MF_PR,
-                     MoreArgs = list(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 1),
+                     MoreArgs = list(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 0),
                      SIMPLIFY = FALSE)
   str(out_MF)
   
-  
-  
-  
-  
-  
-  
+
   
   
   

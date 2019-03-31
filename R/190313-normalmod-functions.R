@@ -61,7 +61,7 @@ draw_sigam2_IGprior = function(nu0,sigma20){
 }
 
 # Psi Matrix draws
-# Draws w/ Mat-F prior
+# Draws w/ Mat-F prior list(nu=2,d=2,e=0,S0=1e3*diag(2))
 draw_PsiInv_matF = function(yvec,Xmat,Zi,bMat,PsiInv,Omega,B0Inv,n,d=1,nu=2){
   # Prior Parameters
     k  <- ncol(bMat)
@@ -69,7 +69,7 @@ draw_PsiInv_matF = function(yvec,Xmat,Zi,bMat,PsiInv,Omega,B0Inv,n,d=1,nu=2){
     d  <- d  # > 0   (e.g. e)
   # Psi|Omega,.
       ScaleMatrix = t(bMat)%*%bMat + Omega      # current data estimation of random effect covariance matrix + Omega = Previuos draw (or initial guess)
-    PsiInvDraw = rwish(v = (n) + (d + k + 1),   # (n) + (d + k - 1) = (posterior) + (prior contribution) [original: n + 2]
+    PsiInvDraw = rwish(v = (n) + (d + k - 1),   # (n) + (d + k - 1) = (posterior) + (prior contribution) [original: n + 2]
                        S = solve(ScaleMatrix))
   # Omega|Psi,.
       ScaleOmega = (PsiInvDraw + B0Inv)
@@ -80,9 +80,9 @@ draw_PsiInv_matF = function(yvec,Xmat,Zi,bMat,PsiInv,Omega,B0Inv,n,d=1,nu=2){
   
 }
 # Draws w/ HW prior
-draw_PsiInv_HW = function(PsiInv,avec,bMat,n,nu=2,eta=1/2,Ak=10**3){
+draw_PsiInv_HW = function(PsiInv,avec,bMat,n,nu=2,eta=1/2,Ak=10**5){
   # Prior Parameters
-    # nu  <- 2; eta <- 1/2; Ak  <- 10**3
+    # nu  <- 2; eta <- 1/2; Ak  <- 10**5
     k   <- ncol(bMat)
   # Posterior samples
     ScaleMatrix = t(bMat)%*%bMat +               # sum of ui %*% ui'

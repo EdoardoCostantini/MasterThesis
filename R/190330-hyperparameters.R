@@ -78,9 +78,9 @@
                     return(list(nu = nu, d = e, e = e, S0 = B0_IWunin))},
                   k = dimens, simplify = F)
   # Add improper prior, educated guess informative, R* uninformative?
-  MF_PR[[length(MF_PR)+1]] <- list(nu=2,d=2,e=0,S0=10**3*diag(2))
-  MF_PR[[length(MF_PR)+1]] <- list(nu=2,d=2,e=0,S0=B0_ed) # this adds the educated prior guess
-  MF_PR[[length(MF_PR)+1]] <- list(nu=2,d=2,e=0,S0=Rstar) # this adds the educated prior guess
+  MF_PR[[length(MF_PR)+1]] <- list(nu=2,d=1,e=0,S0=10**3*diag(2))
+  MF_PR[[length(MF_PR)+1]] <- list(nu=2,d=2,e=0,S0=B0_ed)
+  MF_PR[[length(MF_PR)+1]] <- list(nu=2,d=2,e=0,S0=Rstar)
   # Provide names
   names(MF_PR) <- c("MF_e1","MF_e05","MF_e01","MF_pn","MF_eg","MF_R*")
   # Check structure

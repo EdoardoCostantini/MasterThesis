@@ -163,7 +163,6 @@
         # the first three prior objects have nu = k - 1 + e, d = e, for e = c(1, .5, .1)
         # The function specificaion below follows this priors because when the prior object 
         # is nu = 1.5, d = e and e = .5, we have the prior nu = k -1 + e and delta = e for e = .5
-        # when the prior is nu = 2, delta = 2 and e = 0
         
       # Define initial Values
         if (iniv == 1){
