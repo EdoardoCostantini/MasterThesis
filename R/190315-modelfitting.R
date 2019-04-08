@@ -29,37 +29,41 @@
     # (ie inverse-Wishart, matrix-F, HW does not need it)
     # where the objects contained in the list are the actual priors
     # usually to be included in the "B0 = " argument of your sampling functions
-  source("./R/190318-priorplot-functions.R")
+  #source("./R/190318-priorplot-functions.R")
 
   
-# NEW ---------------------------------------------------------------------
+# Set up  ---------------------------------------------------------------------
+
+  allCONDs <- list(
+    n_cond = list("46" = unique(dat_ALL$cluster),
+                  "8" = c(101, 117, 505, 302, 335, 338, 319, 353), # 319 was 350
+                  "4" =c(101, 117, 505, 302)), #504, 319, 328, 353))
+    J_cond = list("6" = unique(dat_ALL$xvec),
+                  "4" = c(1,2,3,4),
+                  "3" = c(1,2,3))
+  )
   
-# Conditions
-  n_cond <- c(46, 20, 8, 4)
-  J_cond <- c(6, 4, 3)
-  conds <- expand.grid(n_cond, J_cond)[order(expand.grid(n_cond, J_cond)[,1], decreasing = T),][-c(2,3), ]
-  #conds <- expand.grid(n_cond, J_cond)[order(expand.grid(n_cond, J_cond)[,1], decreasing = T),][c(1,4), ]
+  conds.index <- matrix(c(46, 6,
+                          8, 6,
+                          8, 4,
+                          8, 3,  # not 2 because w/ lme random effects are notidentifiable
+                          4, 6,
+                          4, 4,
+                          4, 3), # not smaller than 4 because otherwise:
+                        ncol = 2, byrow = T)
   
-# Storing Objects
-  output <- vector("list", nrow(conds))
-  names(output) <- c(paste0("n", conds[,1],"_", "J", conds[,2]))
-  out_IW <- out_HW <- out_MF <- output
-  # you have to fix the sampling functions to accomodate for different J sies!
+  nconds <- nrow(conds.index)
   
-  RNGkind("L'Ecuyer-CMRG")
-  set.seed(190331) 
+#####################################################
   
-  for (outps in 1:nrow(conds)) {
-    # Selection of clusters and observations
-    n_goal <- conds[outps, 1]
-    J_goal <- conds[outps, 2]
-    if(n_goal == 46){
-      dat <- dat_ALL
-    } else{
-      clusters_goal <- sample(unique(dat_ALL$cluster), n_goal)
-      obs_goal <- unique(dat_ALL$xvec)[1:J_goal]
-      dat <- dat_ALL[dat_ALL$cluster %in% clusters_goal & dat_ALL$xvec %in% obs_goal, ]
-    }
+  # LMEr estimates ####
+  lme4_loop_COND <- vector("list", length = nconds)
+  names(lme4_loop_COND) <- c(paste0("n_", conds.index[, 1], ":J_", conds.index[, 2]))
+  for (outps in 1:nconds) {
+    print(paste("Condtion", seq(1, nconds)[outps], "Started at:", format(Sys.time())))
+    clusters_goal <- allCONDs$n_cond[[which(names(allCONDs$n_cond) == conds.index[outps, 1])]]
+    obs_goal      <- allCONDs$J_cond[[which(names(allCONDs$J_cond) == conds.index[outps, 2])]]
+    dat           <- dat_ALL[dat_ALL$cluster %in% clusters_goal & dat_ALL$xvec %in% obs_goal, ]
     
     # Define Data for function
     dat_yvec     <- dat$yvec
@@ -69,32 +73,243 @@
     dat_Zi       <- cbind(rep(1,length = dat_J), unique(dat_Xmat[, 2]))
     dat_subjects <- dat$cluster
     
-    # Sampling Repetitions
-    MCMC_reps   <- 50
-    MCMC_burnin <- 1/10
-    # IW
-    out_IW[[outps]] <- mcmapply(MCMC_invWish, IW_PR,
-                       MoreArgs = list(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 1),
-                       SIMPLIFY = FALSE)
-    # HW
-    quiet(
-      out_HW[[outps]] <- MCMC_HWprior(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
-                             iniv = 1)
-    )
-    out_MF[[outps]] <- mcmapply(MCMC_matF, MF_PR,
-                       MoreArgs = list(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 0),
-                       SIMPLIFY = FALSE)
+    # # Standard estimation
+    lmefit <- lmer(yvec ~ xvec + cvec + inter + (1 + xvec | cluster), data = dat, REML = FALSE)
+    Psi    <- matrix(VarCorr(lmefit)[[1]][1:4], ncol = 2) # as in MulderPericchi2018 code
+    Psi_sd <- matrix(c(attributes(VarCorr(lmefit)[[1]])$stddev[1],         # save sd of intercepts
+                       rep(attributes(VarCorr(lmefit)[[1]])$correlation[1,2], 2),  # save correlation
+                       attributes(VarCorr(lmefit)[[1]])$stddev[2]),         # save sd of slopes
+                     ncol = 2)
+    sigma2 <- attr(VarCorr(lmefit), "sc")
+    bMat   <- as.matrix(ranef(lmefit)$cluster)
+    theta  <- fixef(lmefit)
+    lme4_loop_COND[[outps]] <- list(lme_fixed  = theta,
+                                    lme_bMat   = bMat,
+                                    lme_Psi    = Psi,
+                                    lme_Psi_sd = Psi_sd,
+                                    lme_sigma2 = sigma2)
   }
+  str(lme4_loop_COND)
   
-  str(out_IW)
-    out_IW$n46_J6$IW_e2$PD_Psi_sd[, 1]
+  # Sampling Repetitions
+  MCMC_reps   <- 5e3
+  MCMC_burnin <- 1/10
+  
+  # IW SAMPLING ####
+  set.seed(19044)
+  IW_loop_COND <- vector("list", length = nconds)
+    names(IW_loop_COND) <- c(paste0("n_", conds.index[, 1], ":J_", conds.index[, 2]))
+  for (outps in 1:nconds) {
+    output_loop_prior <- vector("list", length = length(IW_PR))
+      names(output_loop_prior) <- names(IW_PR)
+    #outps <- 2
+    print(paste("Condtion", seq(1, nconds)[outps], "Started at:", format(Sys.time())))
+    clusters_goal <- allCONDs$n_cond[[which(names(allCONDs$n_cond) == conds.index[outps, 1])]]
+    obs_goal      <- allCONDs$J_cond[[which(names(allCONDs$J_cond) == conds.index[outps, 2])]]
+    dat           <- dat_ALL[dat_ALL$cluster %in% clusters_goal & dat_ALL$xvec %in% obs_goal, ]
     
+    # Define Data for function
+    dat_yvec     <- dat$yvec
+    dat_Xmat     <- cbind(rep(1, nrow(dat)), dat$xvec, dat$cvec, dat$inter)
+    dat_J        <- length(unique(dat$xvec))
+    dat_n        <- nrow(dat)/dat_J
+    dat_Zi       <- cbind(rep(1,length = dat_J), unique(dat_Xmat[, 2]))
+    dat_subjects <- dat$cluster
+    
+    for (PV in 1:length(IW_PR)) {
+      quiet(
+        try(
+          output_loop_prior[[PV]] <- MCMC_invWish(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 1,
+                                                  B0 = IW_PR[[PV]]), silent = TRUE
+        )
+      )
+    }
+    IW_loop_COND[[outps]] <- output_loop_prior
+  }
+    str(IW_loop_COND)
+  
+  # MF SAMPLING ####
+  set.seed(19044)
+  MF_loop_COND <- vector("list", length = nconds)
+    names(MF_loop_COND) <- c(paste0("n_", conds.index[, 1], ":J_", conds.index[, 2]))
+  for (outps in 1:nconds) {
+    output_loop_prior <- vector("list", length = length(MF_PR))
+      names(output_loop_prior) <- names(MF_PR)
+    #outps <- 2
+    print(paste("Condtion", seq(1, nconds)[outps], "Started at:", format(Sys.time())))
+    clusters_goal <- allCONDs$n_cond[[which(names(allCONDs$n_cond) == conds.index[outps, 1])]]
+    obs_goal      <- allCONDs$J_cond[[which(names(allCONDs$J_cond) == conds.index[outps, 2])]]
+    dat           <- dat_ALL[dat_ALL$cluster %in% clusters_goal & dat_ALL$xvec %in% obs_goal, ]
+    
+    # Define Data for function
+    dat_yvec     <- dat$yvec
+    dat_Xmat     <- cbind(rep(1, nrow(dat)), dat$xvec, dat$cvec, dat$inter)
+    dat_J        <- length(unique(dat$xvec))
+    dat_n        <- nrow(dat)/dat_J
+    dat_Zi       <- cbind(rep(1,length = dat_J), unique(dat_Xmat[, 2]))
+    dat_subjects <- dat$cluster
+    
+    for (PV in 1:length(MF_PR)) {
+        quiet(
+      try(
+          output_loop_prior[[PV]] <- MCMC_matF(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 1, 
+                                               B0 = MF_PR[[PV]] ), silent = TRUE
+        )
+          )
+    }
+    MF_loop_COND[[outps]] <- output_loop_prior
+  }
+    str(MF_loop_COND)
+    
+  # HW SAMPLING ####
+  set.seed(19044)
+  HW_loop_COND <- vector("list", length = nconds)
+    names(HW_loop_COND) <- c(paste0("n_", conds.index[, 1], ":J_", conds.index[, 2]))
+  for (outps in 1:nconds) {
+    #outps <- 2
+    print(paste("Condtion", seq(1, nconds)[outps], "Started at:", format(Sys.time())))
+    clusters_goal <- allCONDs$n_cond[[which(names(allCONDs$n_cond) == conds.index[outps, 1])]]
+    obs_goal      <- allCONDs$J_cond[[which(names(allCONDs$J_cond) == conds.index[outps, 2])]]
+    dat           <- dat_ALL[dat_ALL$cluster %in% clusters_goal & dat_ALL$xvec %in% obs_goal, ]
+    
+    # Define Data for function
+    dat_yvec     <- dat$yvec
+    dat_Xmat     <- cbind(rep(1, nrow(dat)), dat$xvec, dat$cvec, dat$inter)
+    dat_J        <- length(unique(dat$xvec))
+    dat_n        <- nrow(dat)/dat_J
+    dat_Zi       <- cbind(rep(1,length = dat_J), unique(dat_Xmat[, 2]))
+    dat_subjects <- dat$cluster
+    
+    quiet(
+      try(
+        HW_loop_COND[[outps]] <- MCMC_HWprior(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 1), 
+        silent = TRUE
+      )
+    )
+     
+  }
+    str(HW_loop_COND)
+    
+    
+#####################################################
+    
+plot(density(MF_loop_COND$`n_4:J_3`$MF_e.1$PD_Psi_sd[,1]))
+  
+  output_final <- readRDS("./output/riesbydata2019-04-07-ncond_7-rep_5000_DEFINITIVE.rds")
+  str(output_final$out_lme4)
+  str(lme4_loop_COND)
+  str(output_final$out_IW)
+  str(IW_loop_COND)
+  str(output_final$out_HW)
+  str(HW_loop_COND)
+  str(output_final$out_MF)
+  str(MF_loop_COND)
+  
+  # Join Results
+  output_final$out_lme4 <- lme4_loop_COND
+  output_final$out_IW   <- IW_loop_COND
+  output_final$out_MF   <- MF_loop_COND
+  output_final$out_HW   <- HW_loop_COND
+  
+  output <- output_final
+  saveRDS(output, paste0("./output/", "riesbydata",Sys.Date(), "-ncond_", nconds, "-rep_", MCMC_reps,"DEFINITIVE", ".rds"))
+  str(output$out_IW)
+
+# mcapply version ---------------------------------------------------------
+
+  nconds <- nrow(conds.index)
+  output_temp <- vector("list", nconds)
+  names(output_temp) <- c(paste0("n_", conds.index[, 1], ":J_", conds.index[, 2]))
+  out_lme4 <- out_IW <- out_HW <- out_MF <- output_temp
+  
+  RNGkind("L'Ecuyer-CMRG")
+  set.seed(190401)
+  
+begtime <- Sys.time()
+# LMEr estimates
+  for (outps in 1:nconds) {
+    print(paste("Condtion", seq(1, nconds)[outps], "Started at:", format(Sys.time())))
+    clusters_goal <- allCONDs$n_cond[[which(names(allCONDs$n_cond) == conds.index[outps, 1])]]
+    obs_goal      <- allCONDs$J_cond[[which(names(allCONDs$J_cond) == conds.index[outps, 2])]]
+    dat           <- dat_ALL[dat_ALL$cluster %in% clusters_goal & dat_ALL$xvec %in% obs_goal, ]
+    
+    # Define Data for function
+    dat_yvec     <- dat$yvec
+    dat_Xmat     <- cbind(rep(1, nrow(dat)), dat$xvec, dat$cvec, dat$inter)
+    dat_J        <- length(unique(dat$xvec))
+    dat_n        <- nrow(dat)/dat_J
+    dat_Zi       <- cbind(rep(1,length = dat_J), unique(dat_Xmat[, 2]))
+    dat_subjects <- dat$cluster
+
+    # Sampling Repetitions
+    MCMC_reps   <- 5e3
+    MCMC_burnin <- 1/10
+
+    # # Standard estimation
+    lmefit <- lmer(yvec ~ xvec + cvec + inter + (1 + xvec | cluster), data = dat, REML = FALSE)
+    Psi    <- matrix(VarCorr(lmefit)[[1]][1:4], ncol = 2) # as in MulderPericchi2018 code
+    Psi_sd <- matrix(c(attributes(VarCorr(lmefit)[[1]])$stddev[1],         # save sd of intercepts
+                       rep(attributes(VarCorr(lmefit)[[1]])$correlation[1,2], 2),  # save correlation
+                       attributes(VarCorr(lmefit)[[1]])$stddev[2]),         # save sd of slopes
+                     ncol = 2)
+    sigma2 <- attr(VarCorr(lmefit), "sc")
+    bMat   <- as.matrix(ranef(lmefit)$cluster)
+    theta  <- fixef(lmefit)
+    out_lme4[[outps]] <- list(lme_fixed  = theta,
+                              lme_bMat   = bMat,
+                              lme_Psi    = Psi,
+                              lme_Psi_sd = Psi_sd,
+                              lme_sigma2 = sigma2)
+    # #IW - fitting the model using the IW prior (will be done for all the prior specifications in the IW_PR list)
+    # out_IW[[outps]] <- mcmapply(MCMC_invWish, IW_PR,
+    #                    MoreArgs = list(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 1),
+    #                    SIMPLIFY = FALSE)
+    # #HW
+    # quiet(
+    #   out_HW[[outps]] <- MCMC_HWprior(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
+    #                          iniv = 1)
+    # )
+    #Mat-f - fitting the model using the maf-f prior (will be done for all the prior specifications in the MF_PR list)
+    # out_MF[[outps]] <- mcmapply(MCMC_matF, MF_PR,
+    #                    MoreArgs = list(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 1),
+    #                    SIMPLIFY = FALSE)
+  }
+
+out <- MCMC_matF(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 1, B0 = MF_PR[[3]] )
+
+colMeans(out_MF$`n_4:J_6`[[1]]$PD_Psi_sd)
+endtime <- Sys.time()
+begtime-endtime
+
+  str(out_lme4)
+    out_lme4$n8_J4$lme_Psi_sd
+  str(out_IW)
+    out_IW$n46_J6$IW_e1$PD_Psi_sd[, 1]
+    out_IW$n4_J4$IW_e1$PD_Psi
   str(out_HW)
     out_HW$n46_J6$PD_Psi_sd[, 1]
-    
+    out_HW$n20_J3$PD_Psi_sd
   str(out_MF)
     out_MF$n46_J6$MF_e1$PD_Psi_sd[, 1]
+    out_MF$n8_J6$MF_pn$PD_Psi_sd
+    out_MF$n8_J3$MF_e0.1$hyperpar
+# - for IW figure out why the prior you thought was uninformative, is actually more informative than the other one
+# - e1 should be ok, why not? See again how this prior should be the regular nu = 2, d = 1 and S0 = B0eg
+# Maybe same thing goes wrong w/ last prior
+# Run again after you figure these details out
+  plot(1:MCMC_reps, out_MF$n46[[1]]$PD_Psi_sd[,1],"l")
+
+# Save Results of analysis ------------------------------------------------
+
+  output_final <- list(out_lme4=out_lme4,out_IW=out_IW,out_HW=out_HW,out_MF=out_MF)
+  str(output_final)
+  saveRDS(output_final, paste0("./output/", "riesbydata",Sys.Date(), "-ncond_", nconds, "-rep_", MCMC_reps, ".rds"))
+  output_final <- readRDS("./output/riesbydata2019-04-04-ncond_7-rep_5000.rds")
   
+  saveRDS(output_final, paste0("./output/", "TEMP190402", ".rds"))
+  OLDoutput <- readRDS(paste0("./output/", "TEMP190402", ".rds"))
+  
+  str(OLDoutput$out_IW)
     
   # Check consistency with resulst of priors with old fitting method Previous results of prior
   # Fit with invWishart Prior
@@ -102,7 +317,7 @@
   out_IW <- MCMC_invWish(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 1,
                B0 = list(e=1,S0=diag(2)))
   par(mfcol = c(2, 5))
-  plot(density(out_IW$PD_Psi_sd[,1]),xlim = c(0, 20), ylim = c(0,.6))
+  plot(density(out_IW$`n_46:J_6`$IW_e.01$PD_Psi_sd[,1]),xlim = c(0, 20), ylim = c(0,.6))
   plot(density(out_IW$PD_Psi_sd[,4]),xlim = c(0, 20), ylim = c(0,.6))
   plot(density(out_IW$PD_Psi_sd[,2]),xlim = c(-1, 1), ylim = c(0,2))
   
@@ -126,7 +341,7 @@
   outPN <- MCMC_matF(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 0,
             B0 = list(nu=2,d=1,e=0,S0=matrix(c(20, 0, 0, 9), ncol = 2)))
   par(mfcol = c(2, 5))
-  plot(density(outPN$PD_Psi_sd[,1]),xlim = c(0, 20), ylim = c(0,.3))
+  plot(density(out_MF$n46[[1]]$PD_Psi_sd[,1]),xlim = c(0, 20), ylim = c(0,1))
   plot(density(outPN$PD_Psi_sd[,4]),xlim = c(0, 20), ylim = c(0,.3))
   plot(density(outPN$PD_Psi_sd[,2]),xlim = c(-1, 1), ylim = c(0,2))
   
@@ -134,21 +349,6 @@
                      MoreArgs = list(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 0),
                      SIMPLIFY = FALSE)
   str(out_MF)
-  
-
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
   
   
   
@@ -197,30 +397,15 @@
     # each out* will have as many sub lists are there are conditions (length(conds))
   
 # MCMC specs
-  MCMC_reps   <- 1e4
+  MCMC_reps   <- 2000
   MCMC_burnin <- 1/10
   
 # Fit model ---------------------------------------------------------------
   
 go <- Sys.time()
 
-for (outps in 1:length(conds)) {
-  # Reduce number of clusters
-  #outps <- 5
-  # if(conds[outps] != "ALL"){
-  #   if(conds[outps] == "8"){
-  #     dat           <- dat_ALL[dat_ALL$cluster %in% c(101, 117, 505, 302, 335, 338, 350, 353), ]
-  #   }
-  #   if(conds[outps] == "4"){
-  #     dat           <- dat_ALL[dat_ALL$cluster %in% c(504, 319, 328, 337), ]
-  #   } else {
-  #     n_goal        <- as.numeric(conds[outps])                       # how many clusters do you want to work with?
-  #     clusters_goal <- sample(unique(dat_ALL$cluster), n_goal)        # sample that many from full dataset.
-  #     dat           <- dat_ALL[dat_ALL$cluster %in% clusters_goal, ]
-  #   }
-  # } else {
-  #   dat           <- dat_ALL                                        # First condtion uses all
-  # }
+for (outps in 2:length(conds)) {
+  
   clusters_goal <- clusters4cond[[outps]]
   dat           <- dat_ALL[dat_ALL$cluster %in% clusters_goal, ]  
   
@@ -232,48 +417,39 @@ for (outps in 1:length(conds)) {
   dat_Zi       <- cbind(rep(1,length = dat_J), unique(dat_Xmat[, 2]))
   dat_subjects <- dat$cluster
   
-  # Define prior (only prior element that needs dat_* elements, so in loop)
-  #Rstar <- solve(t(dat_Zi)%*%dat_Zi)
-  
-  # Perform MCMC
-  print(paste0("n = ", conds[outps],"; prior 1: Huang and Wand Prior") )
+  print(paste0("n = ", conds[outps],"; prior 1: mat-F w/ prior neighbor"))
   quiet(
-    out1[[outps]] <- MCMC_HWprior(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
-                                  iniv = 1)
+    out1[[outps]] <- MCMC_matF(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 1,
+                               B0   = MF_PR$MF_e1)
   )
   Sys.time()
-  print(paste0("n = ", conds[outps],"; prior 2: inv-Wishart"))
+  print(paste0("n = ", conds[outps],"; prior 2: mat-f w/ educated guess"))
   quiet(
-    out2[[outps]] <- MCMC_invWish(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
-                                  iniv = 1,     # the starting values option (1 = lme4 estimates)
-                                  B0   = B0_iW) # the prior guess you are using
+    out2[[outps]] <- MCMC_matF(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
+                               iniv = 1,
+                               B0   = MF_PR$MF_e0.5) # B_edug is the informed guess
   )
   Sys.time()
-  print(paste0("n = ", conds[outps],"; prior 3: mat-F w/ prior neighbor"))
+  print(paste0("n = ", conds[outps],"; prior 3: mat-f w/ R*"))
   quiet(
     out3[[outps]] <- MCMC_matF(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
                                iniv = 1,
-                               B0   = B0_pn) # prior neighbour
+                               B0   = MF_PR$MF_e0.1) # Rstar is the emprical guess
   )
-  Sys.time()
-  print(paste0("n = ", conds[outps],"; prior 4: mat-f w/ educated guess"))
+  print(paste0("n = ", conds[outps],"; prior 4: mat-f w/ R*"))
   quiet(
     out4[[outps]] <- MCMC_matF(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
                                iniv = 1,
-                               B0   = B0_ed) # B_edug is the informed guess
-  )
-  Sys.time()
-  print(paste0("n = ", conds[outps],"; prior 5: mat-f w/ R*"))
-  quiet(
-    out5[[outps]] <- MCMC_matF(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin,
-                               iniv = 1,
-                               B0   = Rstar) # Rstar is the emprical guess
+                               B0   = MF_PR$MF_e0.01) # Rstar is the emprical guess
   )
   Sys.time()
 }
   
 stop <- Sys.time()
 timetaken <- stop - go
+
+str(out2)
+str(out_MF)
 
 # Save Results of analysis ------------------------------------------------
 

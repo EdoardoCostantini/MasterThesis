@@ -104,8 +104,8 @@
   unique(schizdata.noNA$id)
   
   #Dichotomize y
-  # schizdata.noNA$SevIll[which(schizdata.noNA$SevIll < 4)] <- 0
-  # schizdata.noNA$SevIll[which(schizdata.noNA$SevIll >= 4)] <- 1
+  schizdata.noNA$SevIll[which(schizdata.noNA$SevIll < 4)] <- 0
+  schizdata.noNA$SevIll[which(schizdata.noNA$SevIll >= 4)] <- 1
   
   schizdata.noNA <- schizdata.noNA[, c(1:4)]
   schizdata.noNA$inter <- schizdata.noNA$week*schizdata.noNA$drug

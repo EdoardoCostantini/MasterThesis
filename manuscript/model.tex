@@ -9,6 +9,10 @@
 \usepackage[a4paper, total={17cm, 23cm}]{geometry} %a4 = 21cm x 29.7cm
 
 \begin{document}
+A fundamental issue of Bayesian Statistics is the definition uninformative priors. It is common to distinguish between objective and subjective Bayesian approaches to the definition of priors (elaborate more). As Bayesian approaches to data analysis become more and more widespread a need for standard ways of defining priors for analyses becomes more and more relevant. While this issue might be easier for some types of analysis (elaborate more), when models become more complicated the issue becomes non-trivial. In particular there is no standard way of choosing an uninformative prior for the random effects variance-covariance matrix parameter in mixed effects models.
+Publications have flourished on the matter but have often focused on the simpler case of a scalar random effect, the random intercept model. Here I will explain Brown and Draper 2006, Gelman 2006, Kass and Natarajan 2006 solutions.
+Some publications extended the reasoning to the vector random effects case, elaborating on the definition of a prior distribution for the variance covariance matrix (henceforth referred to as $\bm{\Psi}$), as random intercept and random slopes models.
+
 Here I define the Bayesian model I want to use to test the performance of the different priors. The features I want to include are the folowing: continuous outcome, any number/measurement scale.
 
 Let's start with the \textbf{model}
@@ -40,16 +44,17 @@ For what concerns the random effects variance covariance matrix, different prior
 p(\bm{\Psi}) \propto IW(\nu, S_{0})
 \end{equation}	
 
-where we choose $\nu = k-1+e$, and $S_{0}=diag(k-1+e)$, following indications by Gelman \textit{et al} (2014). Thanks to the partitioning property, we know that the diagonal components of $\Psi$ have an inverse-Wisharet distribution themselves. Furthermore, for a univariate case, we know that an inverse Wishart distribution simplifies to an inverse Gamma with parameters $k=1, \alpha=\frac{\nu}{2}, \beta = \frac{S_{0kk}}{2}$. The inverse-Wishart priors we are trying are:
+where we choose $\nu = k-1+e$, and $S_{0}=diag(k-1+e)$, following indications by Gelman \textit{et al} (2014). Given a $\bm{\Psi} \sim IW(\nu, S_{0})$, where $\bm{\Psi}$ and $S_{0}$ are $k \times k$ matrices, it is known that $\bm{\Psi}_{11}$, the $k_1 \times k_1$ upper-left triangular sub-matrix of $\bm{\Psi}$, has an inverse-Wishart distribution as well. In particular, $\bm{\Psi}_{11} \sim IW(\nu-(k-k_1), S_{011})$. Furthermore, for a univariate case ($k=1$), we know that an inverse Wishart distribution simplifies to an inverse Gamma with parameters $\alpha=\frac{\nu}{2}, \beta = \frac{S_{0kk}}{2}$. With the goal of ressempling as close as possible what Gelman 2006 did, we try to define inverse wishart priors for $\bm{\Psi}$, such that the the marginal disitbrution is as close as possible to the IG(e, e) used by Gelman. This goal is achieved by setting $\nu = k-1+e$ and $S_{011} = k-1+e$, which makes the marginal distribution on the variance components (diagonals of $\bm{\Psi}$) $\sigma_{ii}^{2} \sim IG(\frac{\nu-1}{2},\frac{S_{0ii}}{2})$. The inverse-Wishart priors we defined are:
 \begin{center}
 \begin{tabular}{ c c c }
  Prior Description & $\nu$ & $S_{0}$ \\ 
  \hline
- \multicolumn{1}{l}{1. IW uninformative} & $k-1+e$ & diag(k-1+e) \\  
- \multicolumn{1}{l}{2. IW educated} & $k-1+e$ & educated guess \\
+ \multicolumn{1}{l}{1. IW educated} & $2$ & educated guess \\
+ \multicolumn{1}{l}{2. IW uninformative} & $k-1+e$ & $(k-1+e-1)\times$ diag(k) \\  
  \hline
 \end{tabular}
 \end{center}
+1, .01, and .001 are then used as values of e.
 
 	\item inverse-Wishart \textit{a là} Huang and Wand
 
@@ -60,7 +65,7 @@ where we choose $\nu = k-1+e$, and $S_{0}=diag(k-1+e)$, following indications by
 	\end{split}
 \end{equation}
 
-with $\nu = 2$ and $\bm{A} = [1000, 1000]$. The marginal distribution of any standard deviation term in $\bm{\Psi}$ is Half-\textit{t}$(\nu, A_k)$ and, when choosing $\nu = 2$, the marginal disitbrution on the correlation term is uniform on (-1, 1), see property 2 to 4 in Huang and Wand (2013, p. 442). Furthermore, according to Huang and Wand (2013, p. 441) arbitrarily large values for $a_k$ lead to arbitrarily weak priors on the standard deviation term. Hence, our choices for the parameter of this prior are: 
+with $\nu = 2$ and $\bm{A} = [1000, 1000]$. The marginal distribution of any standard deviation term in $\bm{\Psi}$ is Half-\textit{t}$(\nu, A_k)$ and, when choosing $\nu = 2$, the marginal disitbrution on the correlation term is uniform on (-1, 1), see property 2 to 4 in Huang and Wand (2013, p. 442). Furthermore, according to Huang and Wand (2013, p. 441) arbitrarily large values for $a_k$ lead to arbitrarily weak priors on the standard deviation term. Hence, our choices for the parameters of this prior are: 
 	
 \begin{center}
 \begin{tabular}{ c c c }
@@ -80,18 +85,18 @@ p(\bm{\Psi})& \propto F(\bm{\Psi}; \nu, \delta, \bm{B}) \\
 \end{split}
 \end{equation}	
 
-with degrees of freedom $\nu>k-1$, $\delta>0$, and $\bm{B}$ a positive definite scale matrix that functions as prior guess. Three different choices where made for $\bm{B}$ in this paper: diag($10^3$), proper neighbor of $(\sigma^2)^{-\frac{1}{2}}$; $\bm{B}_{ed}$, an educated guess based on data exploration, $\bm{R^*}$ and an empirical bayes choice following Kass and Natarajan (2006). \\
-Considering a $2 \times 2$ random effects variance covariance matrix (random intercepts, and random slopes) that is matrix-F distirbuted, $F(\nu, \delta, \bm{B})$, the marginal distribution on the standard deviations of the random effects are univariate $F(\nu, \delta, b_{11})$ and $F(\nu, \delta, b_{22})$, with $\nu >1, \delta > 0, b_{jj} > 0$. There we chose the first integer number we could for the parameters $\nu$, and $\delta$. When I chose $\delta = 2$, I was thinking of staying close to what has been done in Mulder Pericchi. When I chose $\delta=e$ I wanted to try with some uninformative prior that got as close as possible to non-informative.
+with degrees of freedom $\nu>k-1$, $\delta>0$, and $\bm{B}$ a positive definite scale matrix that functions as prior guess. Three different choices where made for $\bm{B}$ in this paper: diag($10^3$), proper neighbor of $(\sigma^2)^{-\frac{1}{2}}$; $\bm{B}_{ed}$, an educated guess based on data exploration, $\bm{R^*}$ and an empirical bayes choice following Kass and Natarajan (2006).
+Considering a $2 \times 2$ random effects variance covariance matrix (random intercepts, and random slopes) that is matrix-F distributed, $F(\nu, \delta, \bm{B})$, the marginal distribution on the standard deviations of the random effects are univariate $F(\nu, \delta, b_{11})$ and $F(\nu, \delta, b_{22})$, with $\nu >1, \delta > 0, b_{jj} > 0$. To achive uninformativity of this prior we defined $\nu = k -1 + \varepsilon $, $\delta = \varepsilon$, $B = S_0$, with $S_0$ some covariance matrix prior guess and $\epsilon$ a small quantity (1, .5, .1). There we chose the first integer number we could for the parameters $\nu$, and $\delta$. Using the matrix-F prior, we specified two further priors: a proper neighborhood of $|\Sigma^\frac{1}{2}|$ following Mulder Pericchi 2018 ($\nu = 2, \bm{B} = \textit{b}_k \times \bm{I}_k$, with $b=10^3$ an arbitrarily large number); and the default conjugate prior proposed by Kass and Natarajan. The following table summarizes the prior decisions.
 
 \begin{center}
 \begin{tabular}{ c c c c }
  Prior Description & $\nu$ & $\delta$ & $S_{0}$ \\ 
  \hline
- \multicolumn{1}{l}{4. mat-F proper neighbor} & $2$ & $2$ & $10^3 \times \bm{I}_2$ \\
- \multicolumn{1}{l}{5. mat-F uninformative} & $k-1+e$ & $e$ & educated guess \\
- \multicolumn{1}{l}{6. mat-F educated guess} & $2$ & $2$ & educated guess \\ 
- \multicolumn{1}{l}{7. mat-F empirical Bayes} & $2$ & $2$ & \textbf{\textit{R}}* \\
+ \multicolumn{1}{l}{4. mat-F proper neighbor} & $2$ & $1$ & $10^3 \times \bm{I}_2$ \\
+ \multicolumn{1}{l}{5. mat-F uninformative} & $k-1+\varepsilon$ & $\varepsilon$ & educated guess \\
+ \multicolumn{1}{l}{6. mat-F educated guess} & $2$ & $1$ & \textbf{\textit{R}}* \\ 
  \hline
+  \multicolumn{1}{l}{$\varepsilon$ is set to each 1, .5, and .1} 
 \end{tabular}
 \end{center}
 

@@ -20,6 +20,8 @@
 #   dat_Zi   <- cbind(rep(1, length = length(unique(dat_ALL$xvec))), unique(dat_ALL$xvec))
 #   dat_ALLn <- nrow(dat_ALL)/length(unique(dat_ALL$xvec)) # need it for conditons definition
 
+library(lme4)
+
   dimens <- ncol(dat_Zi)   # k
   epsilon <- c(1, 1/2, .1) # choose the e values to plug in "nu = k - 1 + e" (and "d = e" when needed)
   
@@ -38,50 +40,117 @@
     i <- i+6
     #print(paste("After:", i))
   }
-  vi <- var(intercept) # 20 # these guesses are based on the entire sample
-  vs <- var(slope)     # 9
+  vi <- round(var(intercept), 0) # 21 # these guesses are based on the entire sample
+  vs <- round(var(slope), 0)     # 9
     
   B0_ed  <- matrix(c(vi, 0, 0, vs), ncol = 2) # guess based on data exploration and knowledge
-  
-# Empirical Bayes ---------------------------------------------------------
-  # mock version: need to work on this definition
-  Rstar <- solve(t(dat_Zi)%*%dat_Zi) #this will be defined in the loop because it depedns on Zi
-  
-# Proper Neighbor ---------------------------------------------------------
-  # see Mulder Pericchi 2018 (or equivalent) for proper neightbur of |Psi|^(-1/2) prior
-  B0_pn  <- 1e3*diag(2) # mat-f proper neighbour guess
   
 # Inverse Wishart Priors --------------------------------------------------
 # IW uninformative
   # Start by creating the priors with the k - 1 + e scheeme for different values of e
-  IW_PR <- sapply(epsilon, 
-                    FUN = function(k, e){
-                      nu = k - 1 + e
-                      B0_IWunin = (k - 1 + e)*diag(2)
-                      return(list(e = e, S0 = B0_IWunin))},
-                    k = dimens, simplify = F)
-  # Then add the educated prior guess (computed above) with a given e
-  IW_PR[[length(IW_PR)+1]] <- list(e=1,S0=B0_ed)
+  # IW_PR <- sapply(epsilon, 
+  #                   FUN = function(k, e){
+  #                     nu = k - 1 + e
+  #                     B0_IWunin = (k - 1 + e)*diag(2)
+  #                     return(list(e = e, S0 = B0_IWunin))},
+  #                   k = dimens, simplify = F)
+  IW_PR <- NULL
+  # Educated prior guess (computed above) with a given e
+  IW_PR[[length(IW_PR)+1]] <- list(nu=dimens-1+1,e=1,S0=B0_ed)
+  IW_PR[[length(IW_PR)+1]] <- list(nu=dimens-1+1,e=1,S0=(dimens - 2 + 1)*diag(2))
+  IW_PR[[length(IW_PR)+1]] <- list(nu=dimens-1+.1,e=.1,S0=(dimens - 2 + .1)*diag(2))
+  IW_PR[[length(IW_PR)+1]] <- list(nu=dimens-1+.001,e=.001,S0=(dimens - 2 + .001)*diag(2))
+  # Uninformative prior
   # Name all the priors
-  names(IW_PR) <- c("IW_e2","IW_e05","IW_e01","IW_eg")
+  names(IW_PR) <- c("IW_eg","IW_e1", "IW_e01", "IW_e0001")
   # Check the structure of the list
   str(IW_PR)
 
 
 # Matrix F ----------------------------------------------------------------
-  # Create the different versions of the uninformative prior 5
-  MF_PR <- sapply(epsilon, 
-                  FUN = function(k, e){
-                    nu = k - 1 + e
-                    d = e
-                    B0_IWunin = B0_ed
-                    return(list(nu = nu, d = e, e = e, S0 = B0_IWunin))},
-                  k = dimens, simplify = F)
-  # Add improper prior, educated guess informative, R* uninformative?
-  MF_PR[[length(MF_PR)+1]] <- list(nu=2,d=1,e=0,S0=10**3*diag(2))
-  MF_PR[[length(MF_PR)+1]] <- list(nu=2,d=2,e=0,S0=B0_ed)
-  MF_PR[[length(MF_PR)+1]] <- list(nu=2,d=2,e=0,S0=Rstar)
-  # Provide names
-  names(MF_PR) <- c("MF_e1","MF_e05","MF_e01","MF_pn","MF_eg","MF_R*")
-  # Check structure
+  # # Create the different versions of the uninformative prior 5
+  # # Need to make this prior guesses wotk!
+  # MF_PR <- sapply(epsilon,
+  #                 FUN = function(k, e){
+  #                   nu = k - 1 + e
+  #                   d  = e
+  #                   S0 = B0_ed
+  #                   return(list(nu = nu, d = e, e = e,
+  #                               S0 = S0))},           # educated guess
+  #                 k = dimens, simplify = F)
+  # # Add improper prior
+  # MF_PR[[length(MF_PR)+1]] <- list(nu=2,d=1,e=0,
+  #                                  S0=10**3*diag(2)) # mat-f proper neighbour guess
+  # # # Add legacy priors (for older decisions)
+  # MF_PR[[length(MF_PR)+1]] <- list(nu=2,d=1,e=0,
+  #                                  S0=B0_ed)         # plug in educated guess
+  # MF_PR[[length(MF_PR)+1]] <- list(nu=2,d=1,e=0,
+  #                                  S0="R*")          # actual prior is computed in the sampling function when S0 == R* is true
+  # # Provide names
+  # names(MF_PR) <- c(paste0("MF_e", epsilon))#,"MF_pn","MF_eg","MF_R*")
+
+  # Old Priors (should not give identification issues)
+  MF_PR <- NULL
+  MF_PR[[length(MF_PR)+1]] <- list(nu=2,d=1,e=1,
+                                   S0=10**3*diag(2)) # mat-f proper neighbour guess
+  MF_PR[[length(MF_PR)+1]] <- list(nu=2,d=1,e=1,
+                                   S0=B0_ed)         # plug in educat ed guess
+  MF_PR[[length(MF_PR)+1]] <- list(nu=1.5,d=.5,e=.5,
+                                   S0=B0_ed)         # plug in educated guess
+  MF_PR[[length(MF_PR)+1]] <- list(nu=1.1,d=.1,e=.1,
+                                   S0=B0_ed)         # plug in educated guess
+  MF_PR[[length(MF_PR)+1]] <- list(nu=2,d=1,e=0,
+                                   S0="R*")          # actual prior is computed in the sampling function when S0 == R* is true
+  names(MF_PR) <- c("MF_pn","MF_eg(e1)","MF_e.5","MF_e.1","MF_R*")
+  # #Check structure
   str(MF_PR)
+  
+  # # Studing Matrix F prior 
+  # # Here you can change the values of epsilon, nu and delta to see how they effect
+  # # a matrix F distribution
+  # df_freeb_SD <- function(x, nu, d, b){
+  #   ( 2*gamma( (d+nu)/2 ) / ( gamma(nu/2)*gamma(d/2)*b**(nu/2) ) ) * (x)**(nu - 1) * (1 + (x**2)/b)**(-(nu+d)/2)
+  # }
+  # k <- 2 # number of random effects
+  # epsilon <- 1 # small quantity
+  # nu <- k - 1 + epsilon
+  # delta <- epsilon
+  # 
+  # # Sampling from matrix-F using full conditonals
+  # reps <- 10000
+  # Omega <- B <- matrix(c(21, 0, 0, 9), ncol = 2) # guess based on data exploration and knowledge
+  # draws <- matrix(rep(NA, reps*4), ncol = 4)
+  # for (i in 1:reps) {
+  #   # Psi|Omega,.
+  #     ScaleMatrix = Omega
+  #   PsiInvDraw = rwish(v = delta + k - 1,
+  #                      S = solve(ScaleMatrix))
+  #   # Omega|Psi,.
+  #     ScaleOmega = (PsiInvDraw + solve(B))
+  #   Omega = rwish(v = nu + delta + k - 1,
+  #                 S = solve(ScaleOmega))
+  #   draws[i, ] <- c(solve(PsiInvDraw))
+  # }
+  # # For precise density
+  # x <- seq(0, 50, by = .1)
+  # # Sampling density
+  # par(mfcol=c(2,3))
+  # prior_draws_sd <- sqrt(draws[, 1]) #intercept sd
+  # # h <- hist(prior_draws_sd, breaks = 1e5, xlim = c(0,100))
+  # #   plot(h$mids, h$density, type = "l", xlim = c(0,50),ylim=c(0,.5), col = "Gray", lty = 1)
+  # #   lines(x, df_freeb_SD(x, nu = nu, d = delta, b = 21), type = "l", lty = 2)
+  # plot(x, df_freeb_SD(x, nu = nu, d = delta, b = 21), ylim=c(0,.5), type = "l", lty = 2)
+  # # prior_draws_sd <- sqrt(draws[, 4]) #slope sd
+  # # h <- hist(prior_draws_sd, breaks = 1e5, xlim = c(0,100))
+  # #   plot(h$mids, h$density, type = "l", xlim = c(0,50),ylim=c(0,.5), col = "Gray", lty = 1)
+  # #   lines(x, df_freeb_SD(x, nu = nu, d = delta, b = 9), type = "l", lty = 2)
+  # plot(x, df_freeb_SD(x, nu = nu, d = delta, b = 9), ylim=c(0,.5), type = "l", lty = 2)
+  #   # correlation
+  # prior_draws_corr <- draws[, 2] / (sqrt(draws[, 1]) * sqrt(draws[, 4]))
+  # h <- hist(prior_draws_corr, breaks = 10, xlim = c(-1,1))
+  #   plot(h$mids, h$density, type = "l", col = "Gray", lty = 1)
+  #   # Cannot plot prior for correaltion for small e (less than 1)
+  #   # as the wishart sampling function works only for v >= k
+  
+  # param <- .001
+  # plot(sdseq, dinvgamma(sdseq, shape = param, scale = param), type = "l", xlim = c(0,20), ylim = c(0, 2))

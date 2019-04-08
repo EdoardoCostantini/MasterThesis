@@ -67,10 +67,11 @@ draw_PsiInv_matF = function(yvec,Xmat,Zi,bMat,PsiInv,Omega,B0Inv,n,d=1,nu=2){
     k  <- ncol(bMat)
     nu <- nu # > k-1 (e.g. k-1+e)
     d  <- d  # > 0   (e.g. e)
-  # Psi|Omega,.
+  # Psi|Omega,.s
       ScaleMatrix = t(bMat)%*%bMat + Omega      # current data estimation of random effect covariance matrix + Omega = Previuos draw (or initial guess)
     PsiInvDraw = rwish(v = (n) + (d + k - 1),   # (n) + (d + k - 1) = (posterior) + (prior contribution) [original: n + 2]
                        S = solve(ScaleMatrix))
+    #PsiInvDraw = PsiInvDraw + 1e-6*diag(2) # check if draws are similar to the part you can draw wihtout this solution.
   # Omega|Psi,.
       ScaleOmega = (PsiInvDraw + B0Inv)
     Omega = rwish(v = nu + d + k - 1,           # nu + d + k - 1 = 4 when? (all prior: no information directly available on Omega) [original: 4]

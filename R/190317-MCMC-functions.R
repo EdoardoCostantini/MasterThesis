@@ -13,16 +13,23 @@
 #   post_draws_fun_filename <- "./R/190313-normalmod-functions.R"
 #   source(post_draws_fun_filename)
 # 
-# # Data
-# # Depression Scale (n = 46, J = 6)
-#   RiesbyDat <- read.table("./data/RiesbyDat.txt")
+# Data
+# Depression Scale (n = 46, J = 6)
+# RiesbyDat <- read.table("./data/RiesbyDat.txt")
 # 
-#   # Make it digestable for the functions
-#   yvec     <- RiesbyDat$depr
-#   Xmat     <- cbind(rep(1, nrow(RiesbyDat)), RiesbyDat$week, RiesbyDat$endog, RiesbyDat$week*RiesbyDat$endog)
-#   J        <- length(unique(RiesbyDat$week))
-#   n        <- nrow(RiesbyDat)/J
-#   Zi       <- cbind(rep(1, length = J), unique(Xmat[, 2]))
+# # Make it digestable for the functions
+# yvec     <- RiesbyDat$depr
+# Xmat     <- cbind(rep(1, nrow(RiesbyDat)), RiesbyDat$week, RiesbyDat$endog, RiesbyDat$week*RiesbyDat$endog)
+# J        <- length(unique(RiesbyDat$week))
+# n        <- nrow(RiesbyDat)/J
+# Zi       <- cbind(rep(1, length = J), unique(Xmat[, 2]))
+# 
+# yvec <- dat_yvec     <- dat$yvec
+# Xmat <- dat_Xmat     <- cbind(rep(1, nrow(dat)), dat$xvec, dat$cvec, dat$inter)
+# J    <- dat_J        <- length(unique(dat$xvec))
+# n    <- dat_n        <- nrow(dat)/dat_J
+# Zi   <- dat_Zi       <- cbind(rep(1,length = dat_J), unique(dat_Xmat[, 2]))
+# 
 # 
 # # Test Functions
 #   out1 <- MCMC_invWish(yvec = RiesbyDat$depr,
@@ -150,7 +157,7 @@
     # "B0 = " arguments requires a list containing the value of nu, d, epsilon, and the scale matrix to be used in the full conditional
     # of Psi. Also can define differen samsize and burn-in period (=0 if you do not want it)
     
-    MCMC_matF = function(yvec, Xmat, Zi, J, n, iniv = 1, B0 = list(nu=2,d=2,e=0,S0=1e3*diag(2)), samsize = 2000, burnin = 1/10){
+    MCMC_matF = function(yvec, Xmat, Zi, J, n, iniv = 1, B0 = list(nu=2,d=1,e=0,S0=1e3*diag(2)), samsize = 2000, burnin = 1/10){
       # Data Prep
         xvec    <- Xmat[, 2]
         covar   <- Xmat[, 3]
@@ -158,7 +165,19 @@
         cluster <- rep(seq(1, n), each = J)
       # Define priors
         bi0   <- rep(0, ncol(Zi)) # prior for bi
-        B0Inv <- solve(B0$S0)
+        S0 <- B0$S0
+        if(is.matrix(S0) == TRUE){
+          S0Inv <- solve(S0)
+        } else {
+          lm_fit    <- lm(yvec ~ xvec + covar + inter)
+          betaHat   <- c(coefficients(lm_fit))
+          weightVec <- rep(sigma(lm_fit)**2, J)
+          Rstar     <- solve(t(Zi*weightVec)%*%Zi)
+          S0        <- 2*Rstar # should this be k * Rstar?
+          S0Inv     <- solve(S0)
+          # Derivation of the weight vector is in your notes on Natarajan and Kass 2018
+          # Check w/ Joris.
+        }
         # nu, and d are provided in order by the prior list
         # the first three prior objects have nu = k - 1 + e, d = e, for e = c(1, .5, .1)
         # The function specificaion below follows this priors because when the prior object 
@@ -179,7 +198,7 @@
           sigma2 <- 1 #attr(VarCorr(fit), "sc")
           bMat   <- matrix(rep(0, n*2), ncol = 2) #as.matrix(ranef(fit)$cluster)
         }
-          Omega = B0$S0
+          Omega = S0
 
       # Run MCMC
         PD_theta  = matrix(0, nrow = samsize, ncol = ncol(Xmat))
@@ -197,13 +216,10 @@
           theta    <- draw_theta(yvec,Xmat,Zi,bMat,sigma2)
           bMat     <- draw_bMat(yvec,Xmat,Zi,theta,bi0,bMat,sigma2,PsiInv,n,J)
           sigma2   <- draw_sigam2_IMPprior(yvec,Xmat,Zi,theta,bMat,n,J)
-          outDummy <- draw_PsiInv_matF(yvec,Xmat,Zi,bMat,PsiInv,Omega,B0Inv,n,d=B0$d,nu=B0$nu)
+          outDummy <- draw_PsiInv_matF(yvec,Xmat,Zi,bMat,PsiInv,Omega,B0Inv = S0Inv,n,d=B0$d,nu=B0$nu)
               PsiInv <- outDummy[[1]]
               Omega  <- outDummy[[2]]
-      
-          # PD_theta[ss,] = theta
-          # PD_bMat[ss,]  = c(bMat)
-          # PD_Psi[ss,]   = c(solve(PsiInv))
+
         }
         #sampling
         for(ss in 1:samsize){
@@ -212,7 +228,7 @@
           theta    <- draw_theta(yvec,Xmat,Zi,bMat,sigma2)
           bMat     <- draw_bMat(yvec,Xmat,Zi,theta,bi0,bMat,sigma2,PsiInv,n,J)
           sigma2   <- draw_sigam2_IMPprior(yvec,Xmat,Zi,theta,bMat,n,J)
-          outDummy <- draw_PsiInv_matF(yvec,Xmat,Zi,bMat,PsiInv,Omega,B0Inv,n,d=B0$d,nu=B0$nu)
+          outDummy <- draw_PsiInv_matF(yvec,Xmat,Zi,bMat,PsiInv,Omega,B0Inv = S0Inv,n,d=B0$d,nu=B0$nu)
               PsiInv <- outDummy[[1]]
               Omega  <- outDummy[[2]]
           
@@ -225,6 +241,7 @@
             corRIRS <- PD_Psi[ss,2]/(sdRI*sdRS) # save the correlation
           PD_Psi_sd[ss,] = c(sdRI, corRIRS, corRIRS, sdRS)
         }
+        B0$S0 <- S0
         out <- list(PD_theta=PD_theta,  #1
                     PD_bMat=PD_bMat,   #2
                     PD_Psi=PD_Psi,    #3
@@ -233,6 +250,11 @@
                     hyperpar=B0)   #5
         return(out)
     }
+    # 
+    # plot(1:2000, out$PD_Psi_sd[, 1],"l",
+    #          xlim = c(0, 2000))
+    # max(out$PD_Psi[, 3])
+    # plot(density(out$PD_Psi_sd[, 1]))
     
 # Model fitting with HW prior
     # Logic: given the data (in a particular, see above) you can define the initial value option (1 = lme result, 0 = fixed)

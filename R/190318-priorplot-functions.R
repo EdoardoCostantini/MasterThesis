@@ -50,11 +50,11 @@
       (gamma((nu + 1)/2))/(gamma(nu/2)*sqrt(pi*nu)*sigma) * (1+1/nu*((x+mu)**2)/sigma)**(-(nu+1)/2)
   }
   
-  # # How deos it look like
-  # sdseq <- sqrt(seq(0, 3000, length = 100000)) # important to plot the piror
-  # plot(sdseq, dt_folded_sigma2(sdseq, nu = 2, mu = 0, sigma2 = 100), type = "l")
-  # plot(sdseq, dt_folded_sigma(sdseq, nu = 2, mu = 0, sigma = 100), type = "l")
-  
+  # How deos it look like
+  sdseq <- sqrt(seq(0, 3000, length = 100000)) # important to plot the piror
+  plot(sdseq, dt_folded_sigma2(sdseq, nu = 2, mu = 0, sigma2 = 100), type = "l")
+  plot(sdseq, dt_folded_sigma(sdseq, nu = 2, mu = 0, sigma = 100), type = "l")
+
 # Scrap  
 
   # x <- abs(seq(-30, 30))
@@ -75,17 +75,53 @@
 #   plot(sdseq, 
 #        df_freeb_SD(sdseq, nu = 2, d = 1, b = sqrt(20)), type = "l")
 #   
-#   # Standard F
-#   plot(x, 
-#        df_freeb(x, nu = 2, d = 1, b = 1), type = "l",
-#        ylim = c(0, 1))
-#   lines(x, df(x, 2, 1), type = "l", # standard F, df_freeb should give same plot when b = 1
-#        ylim = c(0, 1), col = 3)
-#   plot(x, 
-#        df_freeb_SD(x, nu = 2, d = 1, b = 1), type = "l",
-#        ylim = c(0, 1))
-#   lines(x, df(x, 2, 1), type = "l", # standard F, df_freeb should give same plot when b = 1
-#        ylim = c(0, 1), col = 3)
+  # # Standard F
+  # par(mfcol=c(2,2))
+  # x <- seq(0, 50, by = .1)
+  # k <- 2
+  # epsilon <- .5
+  # nu <- k - 1 + epsilon
+  # delta <- epsilon
+  # plot(x,
+  #      df_freeb(x, nu = nu, d = delta, b = 21), type = "l",
+  #      ylim = c(0, 1), xlim = c(0, 100))
+  # # lines(x, df(x, 2, 1), type = "l", # standard F, df_freeb should give same plot when b = 1
+  # #      ylim = c(0, 1), col = 3)
+  # plot(x,
+  #      df_freeb_SD(x, nu = nu, d = delta, b = 21), type = "l",
+  #      ylim = c(0, 1), xlim = c(0, 100))
+  # # lines(x, df(x, 2, 1), type = "l", # standard F, df_freeb should give same plot when b = 1
+  # #      ylim = c(0, 1), col = 3)
+  # 
+  # # Sampling from matrix-F directly
+  # Omega = B = matrix(c(21, 0, 0, 9), ncol = 2) # guess based on data exploration and knowledge
+  # reps <- 10000
+  # draws <- matrix(rep(NA, reps*4), ncol = 4)
+  # for (i in 1:reps) {
+  #   # Psi|Omega,.
+  #     ScaleMatrix = Omega
+  #   PsiInvDraw = rwish(v = delta + k - 1,
+  #                      S = solve(ScaleMatrix))
+  #   # Omega|Psi,.
+  #     ScaleOmega = (PsiInvDraw + solve(B))
+  #   Omega = rwish(v = nu + delta + k - 1,
+  #                 S = solve(ScaleOmega))
+  #   draws[i, ] <- c(solve(PsiInvDraw))
+  # }
+  # 
+  # prior_draws_sd <- sqrt(draws[, 1])
+  # h <- hist(prior_draws_sd, breaks = 1e5, xlim = c(0,100))
+  #   plot(h$mids, h$density, type = "l", xlim = c(0,100),ylim=c(0,1), col = "Gray", lty = 1)
+  #   
+  # prior_draws_corr <- draws[, 2] / (sqrt(draws[, 1]) * sqrt(draws[, 4]))
+  # h <- hist(prior_draws_corr, breaks = 10, xlim = c(-1,1))
+  #   plot(h$mids, h$density, type = "l", col = "Gray", lty = 1)
+  # 
+  # h <- hist(draws[, 1], breaks = 1000000, xlim = c(0,100))
+  # plot(h$mids, h$density, type = "l", col = "Gray", lty = 1)
+  # 
+  # riwish(1.9, ScaleMatrix)
+  # riwish(2, matrix(c(1,.3,.3,1),2,2))
 # # Plotting Priors
 # # (from Bayesian Statistics Course ex5_1b)
 #   # Data
