@@ -8,7 +8,8 @@
   library(ddpcr)
   library(parallel)
 
-# Load data
+# Load Data ---------------------------------------------------------------
+
   # Riesbt dat
   RiesbyDat <- read.table("./data/RiesbyDat.txt")
   dat_ALL <- data.frame(cluster = RiesbyDat$id,    #constant dataset w/ naming that fits the loop
@@ -23,13 +24,12 @@
   #setwd("/Users/Edoardo/DriveUni/MasterThesis/BayesianThesis")
   source("./R/190313-normalmod-functions.R")
   source("./R/190317-MCMC-functions.R")
-  source("./R/190330-hyperparameters.R")
+  which.model <- "normal_rep"; source("./R/190330-hyperparameters.R")
     # priors are defined in this R script for ease
     # by sourcing this code, you get a list for each type of prior
     # (ie inverse-Wishart, matrix-F, HW does not need it)
     # where the objects contained in the list are the actual priors
     # usually to be included in the "B0 = " argument of your sampling functions
-  #source("./R/190318-priorplot-functions.R")
 
   
 # Set up  ---------------------------------------------------------------------
@@ -37,7 +37,7 @@
   allCONDs <- list(
     n_cond = list("46" = unique(dat_ALL$cluster),
                   "8" = c(101, 117, 505, 302, 335, 338, 319, 353), # 319 was 350
-                  "4" =c(101, 117, 505, 302)), #504, 319, 328, 353))
+                  "4" = c(101, 117, 505, 302)), #504, 319, 328, 353))
     J_cond = list("6" = unique(dat_ALL$xvec),
                   "4" = c(1,2,3,4),
                   "3" = c(1,2,3))
@@ -92,7 +92,7 @@
   str(lme4_loop_COND)
   
   # Sampling Repetitions
-  MCMC_reps   <- 5e3
+  MCMC_reps   <- 1e4
   MCMC_burnin <- 1/10
   
   # IW SAMPLING ####
@@ -133,9 +133,9 @@
   MF_loop_COND <- vector("list", length = nconds)
     names(MF_loop_COND) <- c(paste0("n_", conds.index[, 1], ":J_", conds.index[, 2]))
   for (outps in 1:nconds) {
+    #outps <- 2
     output_loop_prior <- vector("list", length = length(MF_PR))
       names(output_loop_prior) <- names(MF_PR)
-    #outps <- 2
     print(paste("Condtion", seq(1, nconds)[outps], "Started at:", format(Sys.time())))
     clusters_goal <- allCONDs$n_cond[[which(names(allCONDs$n_cond) == conds.index[outps, 1])]]
     obs_goal      <- allCONDs$J_cond[[which(names(allCONDs$J_cond) == conds.index[outps, 2])]]
@@ -148,7 +148,6 @@
     dat_n        <- nrow(dat)/dat_J
     dat_Zi       <- cbind(rep(1,length = dat_J), unique(dat_Xmat[, 2]))
     dat_subjects <- dat$cluster
-    
     for (PV in 1:length(MF_PR)) {
         quiet(
       try(
@@ -160,6 +159,16 @@
     MF_loop_COND[[outps]] <- output_loop_prior
   }
     str(MF_loop_COND)
+    # 
+    # par <- 1
+    # x <- MF_loop_COND$`n_4:J_3`[[4]]$PD_Psi_sd[,c(1,4)]
+    #       # Posteriro Plot
+    #       plot(density(x[,par]),
+    #            xlim = c(0, 20), ylim = c(0, .5))
+    #       
+    # plot(1:5000, x[,par],"l",
+    #    xlim = c(0, 5000), ylim = c(0, 50))
+    
     
   # HW SAMPLING ####
   set.seed(19044)
@@ -182,7 +191,14 @@
     
     quiet(
       try(
-        HW_loop_COND[[outps]] <- MCMC_HWprior(yvec = dat_yvec, Xmat = dat_Xmat, Zi = dat_Zi, J = dat_J, n = dat_n, samsize = MCMC_reps, burnin = MCMC_burnin, iniv = 1), 
+        HW_loop_COND[[outps]] <- MCMC_HWprior(yvec = dat_yvec, 
+                                              Xmat = dat_Xmat, 
+                                              Zi = dat_Zi, 
+                                              J = dat_J, 
+                                              n = dat_n, 
+                                              samsize = MCMC_reps, 
+                                              burnin = MCMC_burnin, 
+                                              iniv = 1), 
         silent = TRUE
       )
     )
@@ -192,10 +208,18 @@
     
     
 #####################################################
-    
-plot(density(MF_loop_COND$`n_4:J_3`$MF_e.1$PD_Psi_sd[,1]))
+
+  # Save output
+  output <- list(out_lme4 = lme4_loop_COND,
+                 out_IW  = IW_loop_COND,
+                 out_MF  = MF_loop_COND,
+                 out_HW  = HW_loop_COND)
+  saveRDS(output, paste0("./output/", "riesbydata",Sys.Date(), "-ncond_", nconds, "-rep_", MCMC_reps, ".rds"))
   
-  output_final <- readRDS("./output/riesbydata2019-04-07-ncond_7-rep_5000_DEFINITIVE.rds")
+  # Checks and stitching
+  plot(density(MF_loop_COND$`n_4:J_3`$MF_e.1$PD_Psi_sd[,1]))
+  
+  output_final <- readRDS("./output/riesbydata2019-04-09-ncond_7-rep_10000.rds")
   str(output_final$out_lme4)
   str(lme4_loop_COND)
   str(output_final$out_IW)
@@ -213,6 +237,9 @@ plot(density(MF_loop_COND$`n_4:J_3`$MF_e.1$PD_Psi_sd[,1]))
   
   output <- output_final
   saveRDS(output, paste0("./output/", "riesbydata",Sys.Date(), "-ncond_", nconds, "-rep_", MCMC_reps,"DEFINITIVE", ".rds"))
+  
+  # SAVE
+  
   str(output$out_IW)
 
 # mcapply version ---------------------------------------------------------
@@ -246,7 +273,7 @@ begtime <- Sys.time()
     MCMC_burnin <- 1/10
 
     # # Standard estimation
-    lmefit <- lmer(yvec ~ xvec + cvec + inter + (1 + xvec | cluster), data = dat, REML = FALSE)
+    lmefit <- lmer(yvec ~ xvec + cvec + inter + (1 + xvec | cluster), data = dat, REML = TRUE) # with small samples regular ML produces biased estiamtes, therefore advisable to use REML (see Goldstein andn Browene Draper summary of Goldstein)
     Psi    <- matrix(VarCorr(lmefit)[[1]][1:4], ncol = 2) # as in MulderPericchi2018 code
     Psi_sd <- matrix(c(attributes(VarCorr(lmefit)[[1]])$stddev[1],         # save sd of intercepts
                        rep(attributes(VarCorr(lmefit)[[1]])$correlation[1,2], 2),  # save correlation

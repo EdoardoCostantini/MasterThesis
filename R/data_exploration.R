@@ -7,6 +7,9 @@
 # Loading datasets found online to see which one could be used
   library(tidyverse)
   library(haven)
+  library(foreign)
+  library(lme4)
+  library(nlme)
   
   # Data Restrictions:
   # - Balanced Desing
@@ -14,6 +17,12 @@
   # - Social Sciences
   # - Repeated measures
   # - Time constant covariate
+  
+# JSP Math Achivement ####
+# Source: http://www.bristol.ac.uk/cmm/team/hg/msm-3rd-ed/datasets.html
+# Book: Multilevel Statistical Models by Harvey Goldstein
+  jsp_dat <- gdata::read.xls("./data/jsp-728.xls")
+  head(jsp_dat)
   
 # NIMH Schizophrenia ####
   # Used by Hedeker Gibbons 2006, Longitudinal Data Analysis
@@ -117,7 +126,7 @@
   schizdata.noNA[order(schizdata.noNA$drug, decreasing = TRUE), ]
   nrow(schizdata.noNA)/4
   head(schizdata.noNA)
-  write.table(schizdata.noNA, "./data/schizdata_noNA.txt")
+  write.table(schizdata.noNA, "./data/schizdata_noNA_dic.txt")
   read.table("./data/schizdata_noNA.txt")
   
 # Riesby data (depression scale) ####
@@ -187,7 +196,7 @@
   # Continuous Outcome Dichotomized
   # Used by Hox 2010 (p. 92, section 5.2)
   gpadata <- as.data.frame(read_sav("./Data/gpa2long.sav"))
-  
+  str(gpadata)
   # Select Columns
   gpadata <- gpadata[, c(1, 2, 3, 5)]
 
@@ -204,8 +213,10 @@
   # Create for functions
   dat <- data.frame(cluster = gpadata$student,
                     yvec    = gpadata$gpa,
-                    tvec    = gpadata$occas,gpadata$occas,
-                    xvec    = gpadata$sex)
+                    xvec    = gpadata$occas,
+                    cvec    = gpadata$sex,
+                    inter   = gpadata$occas*gpadata$sex)
+  write.table(dat, "./data/gpa2_dic.txt")
   
   yvec <- gpadata$gpa
   clusters <- gpadata$student
@@ -350,15 +361,121 @@
   sum(index_educ)
   
   unique(dat$id)[index_educ]
+
+# High School and Beyond data####
+  # Source: Hierarchical Mixed Models Raudenbush Byrk 2002
+  # dat described on page 93
+  hsb <- as.data.frame(read_dta(file = "./Data/hsb.dta")); head(hsb)
+  hsb <- hsb[, c("id", "mathach", "ses", "sector", "meanses")]; head(hsb)
+  hsb <- apply(hsb, 2, as.numeric)
+  # Descriptives
+  nrow(hsb) #7185 individuals
+  length(unique(hsb$id)) # 160 schools
+  
+  data.frame(mean = round(colMeans(hsb[, -1]), 2),
+             sd = round(apply(hsb[, -1], 2, sd), 2)) # same exact data
+  # One-Way Anova
+    hsb <- as.data.frame(hsb)
+  anova <- lmer(mathach ~ (1 | id), REML = F, data = hsb)
+    fixef(anova)
+    Psi    <- matrix(VarCorr(anova)[[1]][1:4], ncol = 2)
+    sigma2 <- attr(VarCorr(anova), "sc")^2
+    round((Psi[1,1]/(Psi[1,1]+sigma2)), 2) # intraclass correlation
+    
+  # Means as outcome
+  mout <- lmer(mathach ~ meanses + (1 | id), REML = F, data = hsb)
+    fixef(mout)
+    Psi    <- matrix(VarCorr(mout)[[1]][1:4], ncol = 2)
+    sigma2 <- attr(VarCorr(mout), "sc")^2
+    round((Psi[1,1]/(Psi[1,1]+sigma2)), 2) # intraclass correlation
+    
+  # Random Coefficient model
+  rcmod <- lmer(mathach ~ ses + (1 + ses | id), REML = F, data = hsb)
+    fixef(rcmod)
+    (Psi    <- matrix(VarCorr(rcmod)[[1]][1:4], ncol = 2))
+    (sigma2 <- attr(VarCorr(rcmod), "sc")^2)
+    round((Psi[1,1]/(Psi[1,1]+sigma2)), 2) # intraclass correlation
+  model1 <- lme(mathach ~ ses, random = ~ses | id, data = hsb, method = "ML")
+  summary(model1)
+  # average regression line for program and non program participants
+    fixef(model1)
+  # Variance Components
+    VarCorr(model1)[1,]
+    VarCorr(model1)[2,] #
+    
+  # Intercept and slopes as outcome
+  fit <- lmer(mathach ~ ses + sector + meanses + ses:meanses + ses:sector + (1 + ses | id), 
+            data = hsb, 
+            REML = F)
+    fixef(fit)
+    (Psi    <- matrix(VarCorr(fit)[[1]][1:4], ncol = 2))
+    (sigma2 <- attr(VarCorr(fit), "sc")^2)
+    round((Psi[1,1]/(Psi[1,1]+sigma2)), 2) # intraclass correlation
+  model1 <- lme(mathach ~ ses + sector*ses, random = ~ses | id, data = hsb, method = "REML")  
+  
+  yvec <- hsb$mathach
+  xvec <- hsb$ses
+  cvec <- hsb$sector
+  inter <- xvec*cvec
+  cluster <- hsb$id
+  # Models
+  # Basic Random Intercept Random Slope Model
+  fit <- lmer(yvec ~ xvec + (1 + xvec | cluster), REML = F)
+    # results are approximately what is reported in Raudenbush Byrk 2002
+  fixef(fit)
+  Psi    <- matrix(VarCorr(fit)[[1]][1:4], ncol = 2)
+  sigma2 <- attr(VarCorr(fit), "sc")^2
+  
+  # Random Intercept and Slope same model than repeated mesuares
+  lmer(yvec ~ 1+ xvec + cvec + inter + (1 + xvec | cluster))
+    # this is the model you already specified for the other case. 
+    # Maybe better to exclude the interaction this time
+  
+  fit <- lmer(mathach ~ ses + sector + meanses + ses:meanses + ses:sector + (1 + ses | id), 
+              data = hsb, 
+              REML = F)
+  fixef(fit)
+  Psi    <- matrix(VarCorr(fit)[[1]][1:4], ncol = 2)
+  sigma2 <- attr(VarCorr(fit), "sc")^2
+  
+  Z1 <- matrix(c(rep(1, sum(hsb$id == unique(hsb$id)[1])),
+                 hsb[hsb$id == unique(hsb$id)[1], c("ses")]),
+               ncol = 2)
+  
   
 # Simulated data ####
-  simdata <- generate_yvec_logreg(n = 30, beta = c(-.625,.25,-.25,.125),
-                                  PsiMat = matrix(c(1,-.25,-.25,.5),
-                                                  ncol = 2))
-  simdata.df <- data.frame(cluster = rep(1:30, each = 7),
-                    yvec = simdata[[1]],
-                    tvec = simdata[[2]][,2],
-                    xvec = simdata[[2]][,3])
-  saveRDS(simdata.df, "./Data/simdata_n30_j7_Psi1-neg0_25-0_5.rds")
-  simdata.df <- readRDS("./Data/simdata_n30_j7_Psi1-neg0_25-0_5.rds")
+  # Data gen function from Mulder Pericchi
+  generate_yvec_logreg = function(n=30,beta = c(-.625,.25,-.25,.125),PsiMat = matrix(c(1,0,0,0),ncol=2)){
+    J = 7
+    xvec = c(rep(1,length=J*n/2),rep(0,length=J*n/2))
+    tvec = rep(-3:3,length=n*J)
+    Xmat = matrix(c(rep(1,length=J*n),tvec,xvec,tvec*xvec),ncol=4)
+    Zi = matrix(c(rep(1,length=J),-3:3),ncol=2)
+    bMat = rmvnorm(n,mean=c(0,0),sigma=PsiMat)
+    muvec = c(Xmat%*%beta)+c(Zi%*%t(bMat))
+    probvec = exp(muvec)/(exp(muvec)+1)
+    yvec = 1*(runif(n*J)<probvec)
+    return(list(yvec,Xmat,bMat))
+  }
+  # Decisions for generation
+  n_c      <- 400
+  beta_c   <- c(-.625,1.5,3,1.5)
+  PsiMat_c <- matrix(c(6,-3,-3,2), ncol = 2)
+  # Generate
+  set.seed(1234)
+  simdata <- generate_yvec_logreg(n = n_c, beta = beta_c, PsiMat = PsiMat_c)
+  
+  simdata <- data.frame(cluster = rep(1:n_c, each = 7),
+                        yvec    = simdata[[1]],
+                        xvec    = simdata[[2]][,2],
+                        cvec    = simdata[[2]][,3],
+                        inter   = simdata[[2]][,2]*simdata[[2]][,3])
+  
+  # Check by fitting glme
+  glmer(yvec ~ xvec + cvec + inter + (1 + xvec|cluster), family=binomial, data = simdata)
+  
+  # Save result
+  saveRDS(simdata, "./Data/simdata.rds")
+  simdata <- readRDS("./Data/simdata.rds")
+  
   

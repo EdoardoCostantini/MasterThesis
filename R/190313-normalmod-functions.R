@@ -28,6 +28,9 @@ draw_theta = function(yvec,Xmat,Zi,bMat,sigma2){
   
 }
 
+i <- 3
+((i-1)*J+1):(i*J)
+
 draw_bMat = function(yvec,Xmat,Zi,theta,bi0,bMat,sigma2,PsiInv,n,J){
   
   ytilde = yvec - c(Xmat%*%theta)
@@ -60,26 +63,26 @@ draw_sigam2_IGprior = function(nu0,sigma20){
   
 }
 
-# Psi Matrix draws
+# Inv-Psi Matrix draws
 # Draws w/ Mat-F prior list(nu=2,d=2,e=0,S0=1e3*diag(2))
 draw_PsiInv_matF = function(yvec,Xmat,Zi,bMat,PsiInv,Omega,B0Inv,n,d=1,nu=2){
+  # Implemented by mixing the scale matrix of an inverse Wishart distribution with a Wishart distribution (eq 3 mulder pericchi)
   # Prior Parameters
     k  <- ncol(bMat)
-    nu <- nu # > k-1 (e.g. k-1+e)
-    d  <- d  # > 0   (e.g. e)
   # Psi|Omega,.s
-      ScaleMatrix = t(bMat)%*%bMat + Omega      # current data estimation of random effect covariance matrix + Omega = Previuos draw (or initial guess)
-    PsiInvDraw = rwish(v = (n) + (d + k - 1),   # (n) + (d + k - 1) = (posterior) + (prior contribution) [original: n + 2]
-                       S = solve(ScaleMatrix))
-    #PsiInvDraw = PsiInvDraw + 1e-6*diag(2) # check if draws are similar to the part you can draw wihtout this solution.
+      ScaleMatrix = t(bMat)%*%bMat + Omega + 1e-6*diag(2) # current data estimation of random effect covariance matrix + Omega = Previuos draw (or initial guess)
+    PsiInvDraw = rwish(v = (n) + (d + k - 1),             # (n) + (d + k - 1) = (posterior) + (prior contribution) [original: n + 2]
+                       S = solve(ScaleMatrix)) + 1e-6*diag(2)
+    # It's an inverse draw because I would like to get an draw from IW(v, S),
+    # but I get a draw from W(v, solve(S)), which becomes a draw from the IW(v, S), when I take its inverse
+    # IW(v, S) <=> solve( draw from W(v, solve(S)) )
   # Omega|Psi,.
-      ScaleOmega = (PsiInvDraw + B0Inv)
+      ScaleOmega = solve(PsiInvDraw + B0Inv)
     Omega = rwish(v = nu + d + k - 1,           # nu + d + k - 1 = 4 when? (all prior: no information directly available on Omega) [original: 4]
-                  S = solve(ScaleOmega))
-  
+                  S = ScaleOmega)
   return(list(PsiInvDraw,Omega))
-  
 }
+
 # Draws w/ HW prior
 draw_PsiInv_HW = function(PsiInv,avec,bMat,n,nu=2,eta=1/2,Ak=10**5){
   # Prior Parameters
@@ -95,11 +98,10 @@ draw_PsiInv_HW = function(PsiInv,avec,bMat,n,nu=2,eta=1/2,Ak=10**5){
     avec = rinvgamma(2,                          # k = 2: 1 random intercept, 1 random slope
                      shape = eta*(nu + k),       # (nu + k) /2, where k = 2, nu = 2
                      scale = scale_avec)
-  
   return(list(PsiInvDraw,avec))
 }
 
-# Draws w/ prior IW(nu0, solve(S0))
+# Draws w/ prior IW(nu0, S0)
 draw_PsiInv_InvWish = function(n,bMat,S0=diag(2),e=1){
   # Prior definition
     k <- ncol(bMat)
@@ -111,7 +113,6 @@ draw_PsiInv_InvWish = function(n,bMat,S0=diag(2),e=1){
                        S = solve(ScaleMatrix))  # distirbution is just Wishart, not inverse! Therefore, the guess priovaded is invterted!
   return(PsiInvDraw)
 }
-
 
 # # Test Draw Functions ----------------------------------------------------------
 # # Test with HW inv-Wish prior

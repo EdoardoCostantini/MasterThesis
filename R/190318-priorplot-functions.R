@@ -50,10 +50,10 @@
       (gamma((nu + 1)/2))/(gamma(nu/2)*sqrt(pi*nu)*sigma) * (1+1/nu*((x+mu)**2)/sigma)**(-(nu+1)/2)
   }
   
-  # How deos it look like
-  sdseq <- sqrt(seq(0, 3000, length = 100000)) # important to plot the piror
-  plot(sdseq, dt_folded_sigma2(sdseq, nu = 2, mu = 0, sigma2 = 100), type = "l")
-  plot(sdseq, dt_folded_sigma(sdseq, nu = 2, mu = 0, sigma = 100), type = "l")
+  # # How deos it look like
+  # sdseq <- sqrt(seq(0, 3000, length = 100000)) # important to plot the piror
+  # plot(sdseq, dt_folded_sigma2(sdseq, nu = 2, mu = 0, sigma2 = 100), type = "l")
+  # plot(sdseq, dt_folded_sigma(sdseq, nu = 2, mu = 0, sigma = 100), type = "l")
 
 # Scrap  
 

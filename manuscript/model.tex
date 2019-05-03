@@ -1,19 +1,158 @@
 %        File: model.tex
 
 \documentclass[a4paper]{article}
+%\documentclass{article}
 
 % Packages
-\usepackage{bm} % for math bold
-\usepackage{amsmath} % for the allignment of equations under same number
-\usepackage{amsmath}					 % matrix
-\usepackage[a4paper, total={17cm, 23cm}]{geometry} %a4 = 21cm x 29.7cm
+\usepackage{bm}      % for math bold
+\usepackage{amsmath} % for the allignment of equations under same number; matrices
+\usepackage[a4paper, total={15cm, 23cm}]{geometry} %a4 = 21cm x 29.7cm
 
+% Layout and formatting
+\renewcommand{\baselinestretch}{1.5}
+
+% Document Descriptions
+\title{Prior distributions for variance-covariance matrices in hierarchical models}
+\author{Edoardo Costantini}
+\date{\today}
+
+% Start Document
 \begin{document}
-A fundamental issue of Bayesian Statistics is the definition uninformative priors. It is common to distinguish between objective and subjective Bayesian approaches to the definition of priors (elaborate more). As Bayesian approaches to data analysis become more and more widespread a need for standard ways of defining priors for analyses becomes more and more relevant. While this issue might be easier for some types of analysis (elaborate more), when models become more complicated the issue becomes non-trivial. In particular there is no standard way of choosing an uninformative prior for the random effects variance-covariance matrix parameter in mixed effects models.
-Publications have flourished on the matter but have often focused on the simpler case of a scalar random effect, the random intercept model. Here I will explain Brown and Draper 2006, Gelman 2006, Kass and Natarajan 2006 solutions.
-Some publications extended the reasoning to the vector random effects case, elaborating on the definition of a prior distribution for the variance covariance matrix (henceforth referred to as $\bm{\Psi}$), as random intercept and random slopes models.
 
-Here I define the Bayesian model I want to use to test the performance of the different priors. The features I want to include are the folowing: continuous outcome, any number/measurement scale.
+\maketitle
+
+\section{Introduction}
+Fully-Bayesian analysis has grown in popularity over the last few
+decades (look for reference). In particular, fully Bayesian 
+approaches to hierarchical models are gaining momentum thanks to
+the wider accessibility of computing power (ehh.. verify!).  The field is flourishing
+with both in terms of practical applications and theoretical interest.
+
+Among the most active theoretical discussions, there is a long 
+lasting debate on the value of subjective versus objective Bayesian 
+perspectives (see Berger, 2006).  While the former approach is often 
+defended as the more truly "Bayesian", allowing the analyst to
+include prior information in the estimation process, the latter is 
+appropriate when a researchers wants to express lack of subjective 
+information on the model parameters of interest.  The present work 
+is not aiming to contribute to this debate directly, but rather is meant to
+focus on a particular issue pertaining to the objective framework.
+
+When subscribing to the "objective" framework, a researcher
+can reflect the lack of prior information, relating to the parameters, 
+by defining prior distributions that are meant to be minimally 
+informative in some sense.  Many theoretical contributions have tried 
+to indicate what distributions, in which situations, are more apt to 
+achieve such a goal.  These endeavors have produced practical guidelines 
+for researchers to assist them in the crucial decision prior 
+distributions represent in Bayesian analysis.  
+
+In making this decision, two concepts are fundamental: conditional 
+conjugacy and informativeness of a prior distribution. A family of 
+priors for a parameter is conditionally conjugate when the conditional 
+posterior of said parameter is also in that family of distributions.  
+An uninformative prior is a reference prior distribution defined in 
+such a way that the posterior inference is not influence in any way 
+by it.  Related to this concept, is that of a weakly informative prior.  
+This is a proper distribution (it integrates to 1) but is set up so 
+that "the information it does provide is intentionally weaker than 
+whatever actual prior knowledge is available" (Gelman, 2006).  This 
+definition is rooted in the convenience, one may even say need, for 
+a reference posterior distribution, by which is meant a distribution, 
+obtained by employing an improper prior, that approximates a posterior 
+that would have been obtained if a proper prior, describing initial 
+vague information, had been used (Bernardo, 1979). In this paper, we 
+will focus on proper priors, but the principle of uninformativeness 
+still applies: objective Bayesian analysis needs a posterior 
+distribution that does not incorporate the researcher's personal 
+beliefs so that it is possible to asses the relevance of initial 
+information.
+
+Much attention has been dedicated in the literature to propose
+prior distributions for scale parameters that are alternatives to the
+overused inverse Gamma distribution (reference dump here). This effort
+finds its \textit{raison d'être} in the undesirable shrinkage of the 
+posterior distributions towards zero, even when the parameters of an 
+inverse Gamma prior are specified to achieve weak informativeness (Brown 
+and Draper, 2006; Gelman, 2006). Many alternatives have been proposed
+but the focus has always been on hierarchical models with single random 
+effects, even when the declared intent was to speak of cases of higher 
+dimensionality (Kass and Natarajan, 2006)
+
+My work contributes to this literature by exploring the degree of 
+uninformativity achieved by different prior distributions for the 
+covariance matrix of a vector of random effects in a hierarchical
+model.
+
+\section{The hierarchical model of interest}
+
+I worked with a two-level normal model of repeated observations $y_{ij}$
+with individual (clusters) effects $\bm{b}_i$
+
+\begin{equation}
+ \begin{split}
+	y_{ij}& = \bm{x}^{T}_{ij} \bm{\theta} + \bm{z}^{T}_{ij}\bm{b}_i + \epsilon_{ij}\\
+	\bm{b}_i& \sim N(\bm{0}, \bm{\Psi})\\
+	\epsilon_{ij}& \sim N(0, \sigma^2)
+ \end{split}
+\end{equation}
+
+with $\bm{b}_i$ a vector of ranodm effects, and $\bm{\Psi}$, and 
+$\sigma^2$ representing the model hyperparameters.  The model is 
+fitted to a repeated observations data set where the main predictor 
+is \textit{time} ($x_1$) and there is a dichotomous covariate $x_2$ 
+that interacts with it.  $\theta$ is a vector of fixed effects 
+containing fixed intercept, time, covariate, and interaction effects.  
+This model is a random intercept and random slope model, with $\bm{b}_i
+ = [b_{i0}, b_{i1}]'$ a vector containing the cluster (individual) 
+specific effects.
+
+\section{Weakly informative prior distributions in hierarchical models}
+
+The weak informativeness of a prior is inherently a provisional concept.
+It makes sense to fit a model with a specific prior definition,
+judge whether the the posterior distribution makes sense (e.g.
+the values allowed by the posterior should be in a plausible range 
+for the parameter of interest, and the posterior itself should not
+be shrieked to zero by the prior); and adjust the prior specification
+if the posterior does not make sense. In other words, if the posterior
+obtained using a given prior spreads over an unrealistic range of values
+for the parameter (e.g. excessively large variances), or if it is shrieked
+towards an implausible small number, then it is reasonable to reconsider
+the prior choice.
+
+In the case of scalar random effects, such as for a random intercept
+model (as opposed to the vector of random effects that characterizes
+random intercept ad slope models), it has been previously shown that 
+the Inverse-gamma distribution with parameters $\alpha = \epsilon$, 
+$\beta = \epsilon$, commonly considered non informative, does not look
+to uphold to such a property (Gelman, 2006).
+
+A fundamental issue of Bayesian Statistics is the definition 
+uninformative priors. It is common to distinguish between 
+objective and subjective Bayesian approaches to the definition 
+of priors (elaborate more).  As Bayesian approaches to data 
+analysis become more and more widespread a need for standard 
+ways of defining priors for analyses becomes more and more 
+relevant. While this issue might be easier for some types of 
+analysis (elaborate more), when models become more complicated 
+the issue becomes non-trivial.  In particular there is no 
+standard way of choosing an uninformative prior for the random 
+effects variance-covariance matrix parameter in mixed effects 
+models.
+
+Publications have flourished on the matter but have often 
+focused on the simpler case of a scalar random effect, the random 
+intercept model. Here I will explain Brown and Draper 2006, 
+Gelman 2006, Kass and Natarajan 2006 solutions.
+Some publications extended the reasoning to the vector random 
+effects case, elaborating on the definition of a prior distribution 
+for the variance covariance matrix (henceforth referred to as 
+$\bm{\Psi}$), as random intercept and random slopes models.
+
+Here I define the Bayesian model I want to use to test the performance 
+of the different priors. The features I want to include are the 
+following: continuous outcome, any number/measurement scale.
 
 Let's start with the \textbf{model}
 
@@ -35,16 +174,58 @@ p(\bm{\theta}) \propto 1
 p(\sigma^2) \propto \sigma^{-2}
 \end{equation}
 
-For what concerns the random effects variance covariance matrix, different priors are tested. In particular we used:
+For what concerns the random effects variance covariance matrix, 
+different priors are tested. In particular we used:
+
+\paragraph{inverse-Wishart prior}
+
+\begin{equation}
+p(\bm{\Psi}) \propto IW(\nu, S_{0})
+\end{equation}	
+
+where $\bm{\Psi}$ is the matrix of variance-covariance hyperparameters
+defined in model 1; $S_{0}$ is a $k \times k$ matrix, usually considered
+as a prior guess for the covariance matrix. The diagonal elements of $\bm{\Psi}$
+are inverse-Wisahrt distributed as well. In particular, the $k_1 \times 
+k_1$ upper-left triangular sub-matrix $\bm{\Psi}_{11}$ is $IW(\nu-(k-k_1), S_{011})$
+distributed.  Furthermore, note that in our case the diagonal elements
+are the random intercept and slope parameters, and therefore are scalar.  
+For a univariate case, the inverse Wishart distribution simplifies 
+to an inverse Gamma with parameters $\alpha=\frac{\nu}{2}, \beta = 
+\frac{S_{0kk}}{2}$. This means that $\sigma_{i0}^2 \sim IW(\nu - 1, S_{011})$
+becomes $\sigma_{i0}^{2} \sim IG(\frac{\nu-1}{2},\frac{S_{0ii}}{2})$.
+By choosing $\nu = k - 1 + \epsilon$ and $S_{011} = k - 1 - 1 + \epsilon$
+we obtain a prior on the variance parameters equivalent to the one 
+$IG(\epsilon, \epsilon)$ studied by Gelman (2006). Note that $k$ being 
+equal to two (there are two random effects) in model 1, the inverse 
+Wishart prior for $\bm{\Psi}$, that grants an $IG(\epsilon, \epsilon)$
+on the variance parameters, is $IW(1+\epsilon, \epsilon I_2)$.
 
 \begin{itemize}
 	\item inverse-Wishart
 	
 \begin{equation}
 p(\bm{\Psi}) \propto IW(\nu, S_{0})
-\end{equation}	
+\end{equation}
 
-where we choose $\nu = k-1+e$, and $S_{0}=diag(k-1+e)$, following indications by Gelman \textit{et al} (2014). Given a $\bm{\Psi} \sim IW(\nu, S_{0})$, where $\bm{\Psi}$ and $S_{0}$ are $k \times k$ matrices, it is known that $\bm{\Psi}_{11}$, the $k_1 \times k_1$ upper-left triangular sub-matrix of $\bm{\Psi}$, has an inverse-Wishart distribution as well. In particular, $\bm{\Psi}_{11} \sim IW(\nu-(k-k_1), S_{011})$. Furthermore, for a univariate case ($k=1$), we know that an inverse Wishart distribution simplifies to an inverse Gamma with parameters $\alpha=\frac{\nu}{2}, \beta = \frac{S_{0kk}}{2}$. With the goal of ressempling as close as possible what Gelman 2006 did, we try to define inverse wishart priors for $\bm{\Psi}$, such that the the marginal disitbrution is as close as possible to the IG(e, e) used by Gelman. This goal is achieved by setting $\nu = k-1+e$ and $S_{011} = k-1+e$, which makes the marginal distribution on the variance components (diagonals of $\bm{\Psi}$) $\sigma_{ii}^{2} \sim IG(\frac{\nu-1}{2},\frac{S_{0ii}}{2})$. The inverse-Wishart priors we defined are:
+where we choose $\nu = k-1+e$, and $S_{0}=diag(k-1+e)$, following 
+indications by Gelman \textit{et al} (2014). Given a $\bm{\Psi} 
+\sim IW(\nu, S_{0})$, where $\bm{\Psi}$ and $S_{0}$ are $k \times 
+k$ matrices, it is known that $\bm{\Psi}_{11}$, the $k_1 \times 
+k_1$ upper-left triangular sub-matrix of $\bm{\Psi}$, has an 
+inverse-Wishart distribution as well. In particular, $\bm{\Psi}_{11} 
+\sim IW(\nu-(k-k_1), S_{011})$. Furthermore, for a univariate case 
+($k=1$), we know that an inverse Wishart distribution simplifies 
+to an inverse Gamma with parameters $\alpha=\frac{\nu}{2}, \beta = 
+\frac{S_{0kk}}{2}$. With the goal of resembling as close as possible 
+what Gelman 2006 did, we try to define inverse wishart priors for 
+$\bm{\Psi}$, such that the the marginal disitbrution is as close as 
+possible to the IG(e, e) used by Gelman. This goal is achieved by 
+setting $\nu = k-1+e$ and $S_{011} = k-1+e$, which makes the marginal 
+distribution on the variance components (diagonals of $\bm{\Psi}$) 
+$\sigma_{ii}^{2} \sim IG(\frac{\nu-1}{2},\frac{S_{0ii}}{2})$. The 
+inverse-Wishart priors we defined are:
+
 \begin{center}
 \begin{tabular}{ c c c }
  Prior Description & $\nu$ & $S_{0}$ \\ 
@@ -65,7 +246,7 @@ where we choose $\nu = k-1+e$, and $S_{0}=diag(k-1+e)$, following indications by
 	\end{split}
 \end{equation}
 
-with $\nu = 2$ and $\bm{A} = [1000, 1000]$. The marginal distribution of any standard deviation term in $\bm{\Psi}$ is Half-\textit{t}$(\nu, A_k)$ and, when choosing $\nu = 2$, the marginal disitbrution on the correlation term is uniform on (-1, 1), see property 2 to 4 in Huang and Wand (2013, p. 442). Furthermore, according to Huang and Wand (2013, p. 441) arbitrarily large values for $a_k$ lead to arbitrarily weak priors on the standard deviation term. Hence, our choices for the parameters of this prior are: 
+with $\nu = 2$ and $\bm{A} = [1000, 1000]$. The marginal distribution of any standard deviation term in $\bm{\Psi}$ is Half-\textit{t}$(\nu, A_k)$ and, when choosing $\nu = 2$, the marginal distribution on the correlation term is uniform on (-1, 1), see property 2 to 4 in Huang and Wand (2013, p. 442). Furthermore, according to Huang and Wand (2013, p. 441) arbitrarily large values for $a_k$ lead to arbitrarily weak priors on the standard deviation term. Hence, our choices for the parameters of this prior are: 
 	
 \begin{center}
 \begin{tabular}{ c c c }
@@ -78,6 +259,10 @@ with $\nu = 2$ and $\bm{A} = [1000, 1000]$. The marginal distribution of any sta
 	
 	\item Matrix-F variate
 	
+Following Mulder, Pericchi 2018, I defined a matrix-F variate 
+distribution as a prior for the covariance matrix of 	the random
+effects $\bm{\Psi}$
+	
 \begin{equation}
 \begin{split}
 p(\bm{\Psi})& \propto F(\bm{\Psi}; \nu, \delta, \bm{B}) \\
@@ -85,22 +270,114 @@ p(\bm{\Psi})& \propto F(\bm{\Psi}; \nu, \delta, \bm{B}) \\
 \end{split}
 \end{equation}	
 
-with degrees of freedom $\nu>k-1$, $\delta>0$, and $\bm{B}$ a positive definite scale matrix that functions as prior guess. Three different choices where made for $\bm{B}$ in this paper: diag($10^3$), proper neighbor of $(\sigma^2)^{-\frac{1}{2}}$; $\bm{B}_{ed}$, an educated guess based on data exploration, $\bm{R^*}$ and an empirical bayes choice following Kass and Natarajan (2006).
-Considering a $2 \times 2$ random effects variance covariance matrix (random intercepts, and random slopes) that is matrix-F distributed, $F(\nu, \delta, \bm{B})$, the marginal distribution on the standard deviations of the random effects are univariate $F(\nu, \delta, b_{11})$ and $F(\nu, \delta, b_{22})$, with $\nu >1, \delta > 0, b_{jj} > 0$. To achive uninformativity of this prior we defined $\nu = k -1 + \varepsilon $, $\delta = \varepsilon$, $B = S_0$, with $S_0$ some covariance matrix prior guess and $\epsilon$ a small quantity (1, .5, .1). There we chose the first integer number we could for the parameters $\nu$, and $\delta$. Using the matrix-F prior, we specified two further priors: a proper neighborhood of $|\Sigma^\frac{1}{2}|$ following Mulder Pericchi 2018 ($\nu = 2, \bm{B} = \textit{b}_k \times \bm{I}_k$, with $b=10^3$ an arbitrarily large number); and the default conjugate prior proposed by Kass and Natarajan. The following table summarizes the prior decisions.
+with degrees of freedom $\nu>k-1$, $\delta>0$, and $\bm{B}$ a 
+positive definite scale matrix that functions as prior guess. 
+Different strategies can be followed in trying to achieve vagueness
+of this prior. In the literature, the improper prior $(\sigma
+^2)^{-\frac{1}{2}}$ has been proposed for the random effects
+variance (Berger, 2006; Berger and Strawderman, 1996). % same quotes from Mulder Pericchi 2018
+Placing a matrix-F prior on $\bm{\Psi}$, one can approximate
+the improper $|\bm{\Psi}|^{-\frac{1}{2}}$ by choosing $\nu=k$,
+the smallest allowed integer, $\bm{B}=b\bm{I}_k$ and letting
+$b \rightarrow +\infty$ for fixed values of $\delta$.
+
+Another approach might be trying to achieve a flat prior on the
+standard deviations of the random effects $p(\sigma) \propto 
+1$, through some other proper neighbor definition. Considering
+$\bm{\Psi} \sim matrix-F(\nu, \delta, \bm{B})$, it is known that
+the marginal distribution of diagonal elements of $\bm{\Psi}$,
+the variance components $\sigma^2_{jj}$, is univariate $F(\nu, 
+\delta, b_{jj})$ which is equivalent to $p(\sigma_{jj};\nu, \delta, 
+b) \propto \sigma^{\nu-1}(1+\sigma^2/b)^{-\frac{\nu+\delta}{2}}$.
+By choosing $\nu = k-1+\epsilon$, with say $\epsilon = .001$,
+$\delta = 1$, and $b \rightarrow \infty$, $p(\sigma) \propto 1$
+is obtained. Hence, the specification $\bm{\Psi} \sim matrix
+-F(\nu = 1.001, \delta = 1, \bm{B} = 1e3\bm{I}_2)$ grants a 
+proper prior neighbor to a flat prior on the standard deviation
+of the random effects.
+
+It is also interesting to approach the vagueness issue by defining
+a vague prior weakly centered around an educated guess. Such educated
+guess can be obtained by plotting fitted regression lines to all
+the clusters in the data set that is under analysis, and trying to
+visually assess the intercepts and the slope variance. For example,
+consider the data set on depression that will be used to present
+the first empirical results. \textit{here add plot and describe how
+you arrived to the educated guess}
+We can then try to achieve vagueness of the prior distribution by
+defining $\nu$ as small as possible. Hence, another prior definition
+that was used in this paper, set $\nu = k - 1 + \epsilon, \delta =
+1$ and $\bm{B} = matrix(21, 0, 0, 9)$.
+
+Finally, we could also specify a prior that uses the empirical
+guess defined by Kass and Natarajan (2006). To do so, we specify
+the vague matrix-F prior with scale matrix $\bm{R}^*$, and $\nu 
+= 2$.
+
+The following table summarizes the matrix-F specifications that
+grant some form of non informativeness and that are compared in 
+this paper.
 
 \begin{center}
 \begin{tabular}{ c c c c }
  Prior Description & $\nu$ & $\delta$ & $S_{0}$ \\ 
  \hline
- \multicolumn{1}{l}{4. mat-F proper neighbor} & $2$ & $1$ & $10^3 \times \bm{I}_2$ \\
- \multicolumn{1}{l}{5. mat-F uninformative} & $k-1+\varepsilon$ & $\varepsilon$ & educated guess \\
- \multicolumn{1}{l}{6. mat-F educated guess} & $2$ & $1$ & \textbf{\textit{R}}* \\ 
+ \multicolumn{1}{l}{$|\bm{\Psi}|^{-\frac{1}{2}}$} & $2$ & $1$ & $10^3 \times \bm{I}_2$ \\
+ \multicolumn{1}{l}{$p(\sigma)\propto1$} & $1.001$ & $1$ & $10^3 \times \bm{I}_2$ \\
+ \multicolumn{1}{l}{vaguely centered around educated guess} & $k-1+\varepsilon$ & $\varepsilon$ & educated guess \\
+ \multicolumn{1}{l}{vaguely centered around empirical $R^*$} & $2$ & $1$ & \textbf{\textit{R}}* \\ 
  \hline
-  \multicolumn{1}{l}{$\varepsilon$ is set to each 1, .5, and .1} 
+  \multicolumn{1}{l}{$\varepsilon$ is set to each 1, and .1} 
 \end{tabular}
 \end{center}
 
 \end{itemize}
+
+\section{Results}
+
+A good performance is shows by posteriors that give a reasonable 
+range for the values of the parameters without having extremely
+long right-tails and without having excessively high peaks at zero.
+
+In the figures, the empty circle represents the REML estimates
+of the parameter of interest. REML is used becasue it's the
+equivalent procedure to RIGLS, one of the most important ML
+estimation methods for Generalized Linear Models. RIGLS coincide 
+with REML for all Gaussian models such as the one described 
+in this article (Goldstein, 2010; Browne Draper, 2006).
+
+When discussing the proper neighbor prior in the matrix F case
+for the SD of the variance, you should highlight that it is 
+not an ideal situation, the role of a weakly informative prior
+is to regularize the posterior distribution so as to keep it into
+reasonable bounds (Gelman et al 2014 book). As a general guideline,
+priors should be made more precises as posteriors are more vague
+(which happens when fewer data are available).
+
+When discussing the IW prior with e you can highlight that, 
+compared to the uninformative matrix F priors, the range of 
+values supported by the posterior distribution is decidedly  
+more concentrated below 2 with a sharp peak towards 0.
+
+In comparison, even when data is scarce (last few conditions),  
+the posterior distributions obtained with the matrix F distribution
+allow for plausible values in a larger range that is more 
+meaningful, while regularized by the prior to avoid impossible
+high values (which does happen when using the proper neighbor 
+prior).
+
+When discussing the priors for the correlation in the IW and
+matrix-F case, you should point out that the beta priors obtained,
+are weakly informative according to the symmetry principle: 
+symmetrical prior distributions do not pull the posteriors in
+any particular direction.
+
+It is also interesting that the results obtained with the $R^*$
+priors, both when used in the inverse-Wishart and the matrix-F
+are extremely similar to the ones obtained with the educated 
+guess obtained by looking at the data.
+
+\section*{Derivation of Full Conditional Posterior Distribution}
 
 The derivation of the conditional posterior follows.
 
